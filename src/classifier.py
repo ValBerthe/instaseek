@@ -4,6 +4,7 @@ import pprint
 from tqdm import tqdm
 import time
 from statistics import mean
+import math
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -12,34 +13,63 @@ password = '=Xx4>+Arw:N7mrM4'
 InstagramAPI = InstagramAPI(username, password)
 InstagramAPI.login()
 
-def isUserInfluencer():
+def uiFormatInt(n):
+	if n > 1000000:
+		return '{:.1f}M'.format(n / 1000000)
+	elif n > 1000:
+		return '{:.1f}K'.format(n / 1000)
+	return n
+
+def getUserInsights():
 	try:
-		username = input('Utilisateur : ')
+		username = input('\n\nUtilisateur : ')
 		time_temp_start = time.time()
 		InstagramAPI.searchUsername(username)
 		user_server = InstagramAPI.LastJson['user']
 		InstagramAPI.getUserFeed(user_server['pk'])
-		feed = InstagramAPI.LastJson
+		feed = InstagramAPI.LastJson['items']
 		rates = list()
-		for post in feed['items']:
+		timestamps = list()
+		print('Feed is %s post-long' % str(len(feed)))
+		for post in feed:
 			# Questionnement de l'API sur les champs du post
+			timestamps.append(int(post['taken_at']))
 			if user_server['follower_count'] == 0:
 				engagement_rate = 0
 			else:
 				engagement_rate = (int(post['like_count']) + int(post['comment_count'])) * 100 / user_server['follower_count']
 			rates.append(engagement_rate)
+		freq = calculateFrequency(len(feed), min(timestamps))
 		if len(rates) > 0:
 			avg = mean(rates)
-			print('Engagement: %.2f%%' % float(engagement_rate))
-			print('N followings: %s' % user_server['following_count'])
-			print('N followers: %s' % user_server['follower_count'])
-			print('User mentions: %s' % user_server['usertags_count'])
+			print('Last post: %s' % getIlya(max(timestamps)))
+			print('Frequency: %.2f' % float(freq))
+			print('Engagement: %.2f%%' % float(avg))
+			print('N followings: %s' % uiFormatInt(int(user_server['following_count'])))
+			print('N followers: %s' % uiFormatInt(int(user_server['follower_count'])))
+			print('User mentions: %s' % uiFormatInt(int(user_server['usertags_count'])))
 		else:
 			print('This user has no posts !')
-	except (KeyError, AttributeError, TypeError):
-		print('An error occured, please try again.')
+	except (KeyError, AttributeError, TypeError, ValueError) as e:
+		print(e)
 		pass
 
+def calculateFrequency(n, min_time):
+	ilya = math.floor(time.time() - min_time)
+	days = ilya // (60 * 60 * 24)
+	days = days if days != 0 else 1
+	return n / days
+
+def getIlya(_time):
+	ilya = math.floor(time.time() - _time)
+	days_mult = 60 * 60 * 24
+	hours_mult = 60 * 60
+	minutes_mult = 60
+	days = ilya // days_mult
+	hours = (ilya - days * days_mult) // hours_mult
+	minutes = (ilya - days * days_mult - hours * hours_mult) // minutes_mult
+	seconds = ilya % minutes_mult
+	return '%s jour%s, %s heure%s, %s minute%s, %s seconde%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
 
 def getHashtagUsersInfo():
 	InstagramAPI.getHashtagFeed('sponsored')
@@ -74,5 +104,5 @@ def getHashtagUsersInfo():
 		isInfluencer = user_server['follower_count'] > 3000
 
 while True:
-	isUserInfluencer()
+	getUserInsights()
 	
