@@ -1,0 +1,4 @@
+InstagramApi
+tqdm
+psycopg2
+imageio
