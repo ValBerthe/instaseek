@@ -5,6 +5,8 @@ from tqdm import tqdm
 import time
 from statistics import mean
 import math
+import re
+from collections import Counter
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -30,6 +32,7 @@ def getUserInsights():
 		feed = InstagramAPI.LastJson['items']
 		rates = list()
 		timestamps = list()
+		brpscs = list()
 		print('Feed is %s post-long' % str(len(feed)))
 		for post in feed:
 			# Questionnement de l'API sur les champs du post
@@ -39,7 +42,11 @@ def getUserInsights():
 			else:
 				engagement_rate = (int(post['like_count']) + int(post['comment_count'])) * 100 / user_server['follower_count']
 			rates.append(engagement_rate)
+			brpsc = getBrandPresence(post)
+			if brpsc:
+				brpscs.extend(brpsc)
 		freq = calculateFrequency(len(feed), min(timestamps))
+		brand_types = get_brand_types(brpscs)
 		if len(rates) > 0:
 			avg = mean(rates)
 			print('Last post: %s' % getIlya(max(timestamps)))
@@ -48,11 +55,37 @@ def getUserInsights():
 			print('N followings: %s' % uiFormatInt(int(user_server['following_count'])))
 			print('N followers: %s' % uiFormatInt(int(user_server['follower_count'])))
 			print('User mentions: %s' % uiFormatInt(int(user_server['usertags_count'])))
+			print('Brand presence: %s' % str(brpscs))
+			print('Brand types: %s' % str(brand_types))
+			print('\nClassification ended in %.2fs seconds' % time.time() - time_temp_start)
 		else:
 			print('This user has no posts !')
-	except (KeyError, AttributeError, TypeError, ValueError) as e:
-		print(e)
+	except Exception as e:
+		#print(e)
 		pass
+
+def getBrandPresence(post):
+	brands = list()
+	try:
+		text = post['caption']['text']
+		usertags = ['@%s' % user['user']['username'] for user in post['usertags']['in']]
+		matches = re.findall('@[\w\.]+', text)
+		for match in matches:
+			if match in usertags:
+				brands.append(match.split('@')[1])
+		return brands
+	except Exception as e:
+		#print(e)
+		pass
+
+def get_brand_types(brands):
+	brand_counter = Counter()
+	for brand in brands:
+		InstagramAPI.searchUsername(brand)
+		brand_full = InstagramAPI.LastJson['user']
+		if 'category' in brand_full:
+			brand_counter[brand_full['category']] += 1
+	return brand_counter
 
 def calculateFrequency(n, min_time):
 	ilya = math.floor(time.time() - min_time)
@@ -70,38 +103,6 @@ def getIlya(_time):
 	minutes = (ilya - days * days_mult - hours * hours_mult) // minutes_mult
 	seconds = ilya % minutes_mult
 	return '%s jour%s, %s heure%s, %s minute%s, %s seconde%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
-
-def getHashtagUsersInfo():
-	InstagramAPI.getHashtagFeed('sponsored')
-	feed = InstagramAPI.LastJson
-
-	for post in feed['items'][0:3]:
-		# Questionnement de l'API sur les champs du post
-		time_temp_start = time.time()
-		InstagramAPI.getUsernameInfo(post['user']['pk'])
-		user_server = InstagramAPI.LastJson['user']
-		pp.pprint('Username: %s' % user_server['username'])
-		pp.pprint('Got 1 Author in %.2f seconds' % float(time.time() - time_temp_start))
-
-		time_temp_start = time.time()
-		InstagramAPI.getMediaComments(str(post['id']))
-		comments_server = InstagramAPI.LastJson
-		pp.pprint('Got %s Comments in %.2f seconds' % (str(len(comments_server['comments'])), float(time.time() - time_temp_start)))
-
-		time_temp_start = time.time()
-		InstagramAPI.getMediaLikers(str(post['id']))
-		likers_server = InstagramAPI.LastJson
-		pp.pprint('Got %s Likers in %.2f seconds' % (str(len(likers_server['users'])), float(time.time() - time_temp_start)))
-
-		engagement_rate = (len(likers_server) + len(comments_server['comments'])) / user_server['follower_count']
-		pp.pprint('Likes: %s' % len(likers_server))
-		pp.pprint('Comments: %s' % len(comments_server['comments']))
-		pp.pprint('Engagement: %s' % engagement_rate)
-		pp.pprint('N followers: %s' % user_server['follower_count'])
-		pp.pprint('User mentions: %s' % user_server['usertags_count'])
-		pp.pprint('___________')
-
-		isInfluencer = user_server['follower_count'] > 3000
 
 while True:
 	getUserInsights()

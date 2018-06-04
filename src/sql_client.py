@@ -204,7 +204,8 @@ class SqlClient(object):
 		print('Average number of followings: ', result)
 
 	def getAverageLikesPerPost(self):
-		self.cursor.execute('''
+		self.cursor.execute(
+			'''
 			SELECT avg(count) FROM (
 				SELECT count(id_post) 
 				FROM likes 
@@ -212,8 +213,24 @@ class SqlClient(object):
 			) AS counts
 			'''
 		)
-		result = "{0:0.2f}".format(self.cursor.fetchone()[0])
-		print('Average number of likes: ', result)
+		average = "{0:0.2f}".format(self.cursor.fetchone()[0])
+		self.cursor.execute(
+			'''
+			SELECT count_lk.likes_floor,  count(count_lk.likes_floor)
+			FROM (
+				SELECT  FLOOR((count(lk.id_post) / 10) *10) as likes_floor 
+				FROM likes as lk
+				GROUP BY lk.id_post
+			) as count_lk
+			GROUP BY count_lk.likes_floor
+			ORDER BY count_lk.likes_floor;
+			'''
+		)
+		result = self.cursor.fetchall()
+		return {
+			'average': average,
+			'histogram': result 
+		}
 
 	def getAverageCommentsPerPost(self):
 		self.cursor.execute('''
