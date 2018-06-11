@@ -185,6 +185,20 @@ class SqlClient(object):
 			''' % str(n))
 			return self.cursor.fetchall()
 
+	def getUser(self, username):
+		self.cursor.execute('''
+			SELECT * FROM users as u
+			WHERE u.user_name = '%s'
+		''' % username)
+		return self.cursor.fetchone()
+
+	def getUserPosts(self, _id):
+		self.cursor.execute('''
+			SELECT * FROM posts as p
+			WHERE p.user_id = '%s'
+		''' % str(_id))
+		return self.cursor.fetchall()
+
 	def getAverageFollowersPerUser(self):
 		self.cursor.execute('''
 			SELECT AVG(n_follower)
@@ -257,7 +271,12 @@ class SqlClient(object):
 			_result[str(couple[0])] = couple[1]
 		return _result
 		
-
+	def getAllComments(self):
+		self.cursor.execute('''
+			SELECT comment from comments
+		''')
+		return self.cursor.fetchall()
+	
 	def close(self):
 		self.closeCursor()
 		self.conn.close()

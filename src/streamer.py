@@ -97,9 +97,9 @@ class Streamer(object):
             pass
 
         diff = time.time() - time_start
-        if diff < 10:
-            tqdm.write('Waiting %.2f seconds before performing next request...' % float(10 - diff))
-            time.sleep(10 - diff)
+        if diff < 5:
+            tqdm.write('Waiting %.2f seconds before performing next request...' % float(5 - diff))
+            time.sleep(5 - diff)
         tqdm.write('\n')
 
     def stream_step(self, hashtag, getTopPosts, stepIndex):

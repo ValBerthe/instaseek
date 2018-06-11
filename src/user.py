@@ -15,15 +15,28 @@ from collections import Counter
 pp = pprint.PrettyPrinter(indent=2)
 sys.path.append(os.path.dirname(__file__))
 comments_model_path = os.path.join(os.path.dirname(__file__), '../models/comments.model')
+users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
 
-class Classifier(object):
+class User(object):
 	def __init__(self):
-		super().__init__
-		username = 'project_bulb'
-		password = '=Xx4>+Arw:N7mrM4'
-		self.InstagramAPI = InstagramAPI(username, password)
+		super().__init__()
+		igusername = 'project_bulb'
+		igpassword = '=Xx4>+Arw:N7mrM4'
+		self.username = ''
+		self.InstagramAPI = InstagramAPI(igusername, igpassword)
 		self.InstagramAPI.login()
 		self.sqlClient = SqlClient()
+
+		# Features pour l'apprentissage
+		self.lastpost = 0
+		self.frequency = 0
+		self.engagement = 0
+		self.followings = 0
+		self.followers = 0
+		self.usermentions = 0
+		self.brandpresence = 0
+		self.brandtypes = 0
+		self.commentscore = 0
 
 	def __uiFormatInt(self, n):
 		if n > 1000000:
@@ -32,14 +45,33 @@ class Classifier(object):
 			return '{:.1f}K'.format(n / 1000)
 		return n
 
-	def getUserInsights(self):
+	def __uiGetIlya(self, _time):
+		ilya = math.floor(time.time() - _time)
+		days_mult = 60 * 60 * 24
+		hours_mult = 60 * 60
+		minutes_mult = 60
+		days = ilya // days_mult
+		hours = (ilya - days * days_mult) // hours_mult
+		minutes = (ilya - days * days_mult - hours * hours_mult) // minutes_mult
+		seconds = ilya % minutes_mult
+		return '%s jour%s, %s heure%s, %s minute%s, %s seconde%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
+
+	def __calculateFrequency(self, n, min_time):
+		ilya = math.floor(time.time() - min_time)
+		days = ilya // (60 * 60 * 24)
+		days = days if days != 0 else 1
+		return n / days
+
+	def getUserInfoIG(self):
 		try:
-			username = input('\n\nUtilisateur : ')
+			username = self.username
 			time_temp_start = time.time()
 			self.InstagramAPI.searchUsername(username)
 			user_server = self.InstagramAPI.LastJson['user']
+			time.sleep(3)
 			self.InstagramAPI.getUserFeed(user_server['pk'])
 			feed = self.InstagramAPI.LastJson['items']
+			time.sleep(3)
 			rates = list()
 			timestamps = list()
 			comment_scores = list()
@@ -62,12 +94,26 @@ class Classifier(object):
 				# Get comment scores
 				self.InstagramAPI.getMediaComments(str(post['id']))
 				comments_server = self.InstagramAPI.LastJson
+				time.sleep(3)
 				for comment in comments_server['comments']:
+					if len(comment_scores) > 10:
+						break
+					if comment['user']['username'] == self.username:
+						continue
+					score = self.getCommentScore(comment['text'])
 					print(comment['text'])
-					print(self.getCommentScore(comment['text']))
-					comment_scores.append(self.getCommentScore(comment['text']))
+					print(score)
+					print('____________')
+					comment_scores.append(score)
+					time.sleep(3)
+
+			# Calculate frequency
 			freq = self.__calculateFrequency(len(feed), min(timestamps))
+
+			# Get brand types
 			brand_types = self.getBrandTypes(brpscs)
+
+			# Tool to test comment score
 			'''while True:
 				text = input('Comment and I will tell your score ! (type \'exit\' to go next) : ')
 				if text == 'exit': 
@@ -76,10 +122,20 @@ class Classifier(object):
 					comment_score = self.getCommentScore(text)
 					print(text)
 					print(comment_score)'''
-			print(comment_scores)
+
+			# Assign and print features
 			if len(rates) > 0:
 				avg = mean(rates)
-				print('Last post: %s' % self.__getIlya(max(timestamps)))
+				self.lastpost = time.time() - max(timestamps)
+				self.frequency = freq
+				self.engagement = avg
+				self.followings = int(user_server['following_count'])
+				self.followers = int(user_server['follower_count'])
+				self.usermentions = int(user_server['usertags_count'])
+				self.brandpresence = brpscs
+				self.brandtypes = brand_types
+				self.commentscore = mean(comment_scores)
+				print('Last post: %s' % self.__uiGetIlya(max(timestamps)))
 				print('Frequency: %.2f' % float(freq))
 				print('Engagement: %.2f%%' % float(avg))
 				print('N followings: %s' % self.__uiFormatInt(int(user_server['following_count'])))
@@ -117,12 +173,6 @@ class Classifier(object):
 			if 'category' in brand_full:
 				brand_counter[brand_full['category']] += 1
 		return brand_counter
-
-	def __calculateFrequency(self, n, min_time):
-		ilya = math.floor(time.time() - min_time)
-		days = ilya // (60 * 60 * 24)
-		days = days if days != 0 else 1
-		return n / days
 
 	def getCommentScore(self, comment):
 		if not os.path.isfile(os.path.join(comments_model_path)):
@@ -168,28 +218,21 @@ class Classifier(object):
 			pickle.dump(comment_count, outfile)
 
 	def processWordComment(self, word):
-		if word[0] == '#':
+		if word[0] in ['#', '@']:
 			word = None
 		else:
 			try:
+				# Ici ça pète quand il y a du russe ou des emojis. 
 				word = str(word).lower()
 			except:
-				word = None
+				word = str(word)
 		return word
 
-	def __getIlya(self, _time):
-		ilya = math.floor(time.time() - _time)
-		days_mult = 60 * 60 * 24
-		hours_mult = 60 * 60
-		minutes_mult = 60
-		days = ilya // days_mult
-		hours = (ilya - days * days_mult) // hours_mult
-		minutes = (ilya - days * days_mult - hours * hours_mult) // minutes_mult
-		seconds = ilya % minutes_mult
-		return '%s jour%s, %s heure%s, %s minute%s, %s seconde%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
-
-clf = Classifier()
-
-while True:
-	clf.getUserInsights()
-	
+	def getUserInfoSQL(self):
+		self.sqlClient.openCursor()
+		user_sql = self.sqlClient.getUser(self.username)
+		pp.pprint(user_sql)
+		posts = self.sqlClient.getUserPosts(user_sql[0])
+		pp.pprint(posts)
+		for post in posts:
+			continue
