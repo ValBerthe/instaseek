@@ -7,6 +7,7 @@ import time
 from statistics import mean
 from sql_client import *
 import math
+import numpy as np
 import re
 import sys
 import os
@@ -113,16 +114,6 @@ class User(object):
 			# Get brand types
 			brand_types = self.getBrandTypes(brpscs)
 
-			# Tool to test comment score
-			'''while True:
-				text = input('Comment and I will tell your score ! (type \'exit\' to go next) : ')
-				if text == 'exit': 
-					break
-				else: 
-					comment_score = self.getCommentScore(text)
-					print(text)
-					print(comment_score)'''
-
 			# Assign and print features
 			if len(rates) > 0:
 				avg = mean(rates)
@@ -180,7 +171,7 @@ class User(object):
 			self.createCommentsModel()
 		model = pickle.load(open(comments_model_path, 'rb'))
 		word_scores = list()
-		for word in re.compile('[#A-zÀ-ÿ]+').findall(comment):
+		for word in re.compile('[@#A-zÀ-ÿ]+').findall(comment):
 			_word = self.processWordComment(word)
 			if _word:
 				if model[_word] > 0:
@@ -204,11 +195,13 @@ class User(object):
 		j = 0
 		for comment in tqdm(comments):
 			comment = str(comment)
-			for word in re.compile('[#A-zÀ-ÿ]+').findall(comment):
+			wordArray = re.compile('[@#A-zÀ-ÿ]+').findall(comment)
+			length = len(wordArray)
+			for word in wordArray:
 				_word = self.processWordComment(word)
 				if _word:
 					i += 1
-					comment_count[str(_word)] += 1
+					comment_count[_word] += 1 / length
 				else:
 					j += 1
 		print('Éléments considérés : %s' % str(i))
@@ -225,7 +218,7 @@ class User(object):
 				# Ici ça pète quand il y a du russe ou des emojis. 
 				word = str(word).lower()
 			except:
-				word = str(word)
+				word = word
 		return word
 
 	def getUserInfoSQL(self):
@@ -236,3 +229,14 @@ class User(object):
 		pp.pprint(posts)
 		for post in posts:
 			continue
+
+	def testCommentScore(self):
+		# Tool to test comment score
+		while True:
+			text = input('Comment and I will tell your score ! (type \'exit\' to go next) : ')
+			if text == 'exit': 
+				break
+			else: 
+				comment_score = self.getCommentScore(text)
+				print(text)
+				print(comment_score)
