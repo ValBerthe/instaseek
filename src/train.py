@@ -1,6 +1,7 @@
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import confusion_matrix, classification_report
 import sys
 import os
@@ -18,7 +19,7 @@ model_path = os.path.join(os.path.dirname(__file__), '../models/classifier.model
 users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
 labels_model_path = os.path.join(os.path.dirname(__file__), '../models/labels.model')
 ig_url = 'http://www.instagram.com/'
-# key_features = ['commentscore', 'engagement', 'followers', 'followings', 'frequency', 'lastpost', 'usermentions']
+#key_features = ['commentscore', 'engagement', 'followers', 'followings', 'frequency', 'lastpost', 'usermentions']
 key_features = ['engagement', 'followers', 'followings', 'frequency', 'usermentions']
 
 def build_users_model():
@@ -71,18 +72,18 @@ def train_model():
 
 			# train classifier
 			clf = RandomForestClassifier(n_estimators = 500)
-			clf.fit(users_array[150:], labels[150:])
+			clf.fit(users_array[:370], labels[:370])
 			importance = clf.feature_importances_
-			score = clf.score(users_array[:150], labels[:150])
+			score = clf.score(users_array[370:], labels[370:])
 			print(score)
-			pred = clf.predict(users_array[:100])
+			pred = clf.predict(users_array[370:])
 			print('\n%s\n' % str(pred))
-			print(confusion_matrix(labels[:100], pred))
+			print(confusion_matrix(labels[370:], pred))
 			print('\n')
 			for couple in zip(key_features, importance):
 				print('________ %s' % str((couple[0], '%.2f%%' % float(100 * couple[1]))))
 			print('\n')
-			print(classification_report(labels[:100], pred))
+			print(classification_report(labels[370:], pred))
 			with open(model_path, 'wb') as __f:
 				pickle.dump(clf, __f)
 
