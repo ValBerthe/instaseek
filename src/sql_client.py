@@ -86,14 +86,76 @@ class SqlClient(object):
 			)
 			self.conn.commit()
 
+	def insertUserFeed(self, feed):
+		for post in feed:
+			p__id, p__timestamp, p_media_type, p_text, p_small_img_url, p_tall_img_url, p_n_likes, p_n_comments, p_location, p_user_id, user_tags, sponsor_tags = get_post_fields(post)
+			self.cursor.execute('''
+				INSERT INTO posts (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin)
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+				ON CONFLICT (id) DO UPDATE
+				SET (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+				''',
+				(
+					str(p__id),
+					str(p__timestamp),
+					str(math.floor(time.time())),
+					str(p_media_type),
+					str(p_text),
+					str(p_small_img_url),
+					str(p_tall_img_url),
+					str(p_n_likes),
+					str(p_n_comments),
+					str(p_location),
+					str(p_user_id),
+					str('false'),
+					str(self.hashtag),
+					# for update
+					str(p__id),
+					str(p__timestamp),
+					str(math.floor(time.time())),
+					str(p_media_type),
+					str(p_text),
+					str(p_small_img_url),
+					str(p_tall_img_url),
+					str(p_n_likes),
+					str(p_n_comments),
+					str(p_location),
+					str(p_user_id),
+					str('false'),
+					str(self.hashtag)
+				)
+			)
+
+			for user_tag in user_tags:
+				id_user_tag = user_tag['user']['pk']
+				_id = str(p__id) + str(id_user_tag)
+				self.cursor.execute('''
+					INSERT INTO user_tags (id, id_post, id_user)
+					VALUES (%s, %s, %s)
+					ON CONFLICT (id) DO UPDATE
+					SET (id, id_post, id_user) = (%s, %s, %s);
+					''',
+					(
+						str(_id),
+						str(p__id),
+						str(id_user_tag),
+						# for update
+						str(_id),
+						str(p__id), 
+						str(id_user_tag)
+					)
+				)
+		self.conn.commit()
+
 	def insertUser(self, user):
 		u_id, u_user_name, u_full_name, u_is_private, u_is_verified, u_profile_pic_url, u_category, u_n_media, u_n_follower, u_n_following, u_is_business, u_biography, u_n_usertags, u_email, u_phone, u_city_id = get_user_fields(
-			user)
+			user
+		)
 		self.cursor.execute('''
-			INSERT INTO users (id, user_name, full_name, is_private, is_verified, profile_pic_url, category, n_media, n_follower, n_following, is_business, biography, n_usertags, email, phone, city_id)
-			VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+			INSERT INTO users (id, user_name, full_name, is_private, is_verified, profile_pic_url, category, n_media, n_follower, n_following, is_business, biography, n_usertags, email, phone, city_id, with_feed)
+			VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 			ON CONFLICT (id) DO UPDATE
-			SET (id, user_name, full_name, is_private, is_verified, profile_pic_url, category, n_media, n_follower, n_following, is_business, biography, n_usertags, email, phone, city_id) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+			SET (id, user_name, full_name, is_private, is_verified, profile_pic_url, category, n_media, n_follower, n_following, is_business, biography, n_usertags, email, phone, city_id, with_feed) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 		''', (
 				str(u_id),
 				str(u_user_name),
@@ -111,6 +173,7 @@ class SqlClient(object):
 				str(u_email),
 				str(u_phone),
 				str(u_city_id),
+				'true',
 				# for update
 				str(u_id),
 				str(u_user_name),
@@ -127,7 +190,8 @@ class SqlClient(object):
 				str(u_n_usertags),
 				str(u_email),
 				str(u_phone),
-				str(u_city_id)
+				str(u_city_id),
+				'true'
 			)
 		)
 		self.conn.commit()
@@ -175,7 +239,7 @@ class SqlClient(object):
 					str(id_user)
 				)
 			)
-			self.conn.commit()
+		self.conn.commit()
 
 	def getUsers(self, n = 0):
 		if n > 0:
@@ -232,7 +296,7 @@ class SqlClient(object):
 			'''
 			SELECT count_lk.likes_floor,  count(count_lk.likes_floor)
 			FROM (
-				SELECT  FLOOR((count(lk.id_post) / 10) *10) as likes_floor 
+				SELECT  FLOOR((count(lk.id_post) / 10) *10) as likes_floor
 				FROM likes as lk
 				GROUP BY lk.id_post
 			) as count_lk

@@ -8,7 +8,7 @@ from statistics import mean
 from sql_client import *
 import math
 import numpy as np
-import re
+import regex
 import sys
 import os
 from collections import Counter
@@ -147,7 +147,7 @@ class User(object):
 		try:
 			text = post['caption']['text']
 			usertags = ['@%s' % user['user']['username'] for user in post['usertags']['in']]
-			matches = re.findall('@[\w\.]+', text)
+			matches = regex.findall('@[\w\.]+', text)
 			for match in matches:
 				if match in usertags:
 					brands.append(match.split('@')[1])
@@ -171,7 +171,7 @@ class User(object):
 			self.createCommentsModel()
 		model = pickle.load(open(comments_model_path, 'rb'))
 		word_scores = list()
-		for word in re.compile('[@#A-zÀ-ÿ]+').findall(comment):
+		for word in regex.compile(r'[@#\p{L}_\u263a-\U0001f645]+').findall(comment):
 			_word = self.processWordComment(word)
 			if _word:
 				if model[_word] > 0:
@@ -195,7 +195,7 @@ class User(object):
 		j = 0
 		for comment in tqdm(comments):
 			comment = str(comment)
-			wordArray = re.compile('[@#A-zÀ-ÿ]+').findall(comment)
+			wordArray = regex.compile(r'[@#\p{L}_\u263a-\U0001f645]+').findall(comment)
 			length = len(wordArray)
 			for word in wordArray:
 				_word = self.processWordComment(word)
