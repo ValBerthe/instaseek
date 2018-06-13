@@ -19,6 +19,7 @@ from sql_client import *
 # Tracking du chemin des fichiers et instanciation du PrettyPrinter
 sys.path.append(os.path.dirname(__file__))
 pp = pprint.PrettyPrinter(indent=2)
+TTW = 8
 
 class Streamer(object):
     def __init__(self):
@@ -66,6 +67,11 @@ class Streamer(object):
             likers_server = self.InstagramAPI.LastJson
             tqdm.write('Got %s Likers in %.2f seconds' % (str(len(likers_server['users'])), float(time.time() - time_temp_start)))
 
+            time_temp_start = time.time()
+            self.InstagramAPI.getUserFeed(post['user']['pk'])
+            feed = self.InstagramAPI.LastJson['items']
+            tqdm.write('Got %s posts from feed in %.2f seconds' % (str(len(feed)), float(time.time() - time_temp_start)))
+
             # Insertion dans la BDD
             time_temp_start = time.time()
             self.sqlClient.insertUser(user_server['user'])
@@ -76,6 +82,11 @@ class Streamer(object):
             self.sqlClient.insertPost(post, topPost = topPost)
             tqdm.write('Inserted 1 Post in %.2f seconds' % float(time.time() - time_temp_start))
             self.n_posts += 1
+
+            time_temp_start = time.time()
+            self.sqlClient.insertUserFeed(feed)
+            tqdm.write('Inserted feed of %s posts in %.2f seconds' % (str(len(feed)), float(time.time() - time_temp_start)))
+            self.n_posts += len(feed)
 
             time_temp_start = time.time()
             self.sqlClient.insertLikers(post['id'], likers_server['users'])
@@ -97,9 +108,9 @@ class Streamer(object):
             pass
 
         diff = time.time() - time_start
-        if diff < 5:
-            tqdm.write('Waiting %.2f seconds before performing next request...' % float(5 - diff))
-            time.sleep(5 - diff)
+        if diff < TTW:
+            tqdm.write('Waiting %.2f seconds before performing next request...' % float(TTW - diff))
+            time.sleep(TTW - diff)
         tqdm.write('\n')
 
     def stream_step(self, hashtag, getTopPosts, stepIndex):
