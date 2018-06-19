@@ -30,7 +30,13 @@ comments_model_path = os.path.join(os.path.dirname(__file__), '../models/comment
 users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
 
 class User(object):
+	"""
+	Classe utilisateur.
+	"""
 	def __init__(self):
+		"""
+		__init__ function.
+		"""
 		super().__init__()
 		igusername = 'project_bulb'
 		igpassword = '=Xx4>+Arw:N7mrM4'
@@ -38,6 +44,7 @@ class User(object):
 		self.InstagramAPI = InstagramAPI(igusername, igpassword)
 		self.InstagramAPI.login()
 		self.sqlClient = SqlClient()
+		self.n_clusters = 4
 
 		# Features pour l'apprentissage
 		self.lastpost = 0
@@ -51,6 +58,9 @@ class User(object):
 		self.commentscore = 0
 
 	def __uiFormatInt(self, n):
+		"""
+		Conversion du nombre de followers/abonnements en K (mille) et M (million).
+		"""
 		if n > 1000000:
 			return '{:.1f}M'.format(n / 1000000)
 		elif n > 1000:
@@ -58,6 +68,9 @@ class User(object):
 		return n
 
 	def __uiGetIlya(self, _time):
+		"""
+		Génération du string: Il y a...
+		"""
 		ilya = math.floor(time.time() - _time)
 		days_mult = 60 * 60 * 24
 		hours_mult = 60 * 60
@@ -69,12 +82,18 @@ class User(object):
 		return '%s jour%s, %s heure%s, %s minute%s, %s seconde%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
 
 	def __calculateFrequency(self, n, min_time):
+		"""
+		Calcul de la fréquence de post.
+		"""
 		ilya = math.floor(time.time() - min_time)
 		days = ilya // (60 * 60 * 24)
 		days = days if days != 0 else 1
 		return n / days
 
 	def __calcCentroid3d(self, listie):
+		"""
+		Calcul des barycentres des points de couleur dans le repère lab*. 
+		"""
 		arr = np.array(listie)
 		length = arr.shape[0]
 		sum_x = np.sum(arr[:, 0])
@@ -85,6 +104,9 @@ class User(object):
 		return mean(distances)
 
 	def getUserInfoIG(self):
+		"""
+		Récupération des critères de l'utilisateur via. l'API d'Instagram.
+		"""
 		try:
 			username = self.username
 			time_temp_start = time.time()
@@ -98,7 +120,6 @@ class User(object):
 			timestamps = list()
 			comment_scores = list()
 			brpscs = list()
-			image_urls = list()
 			colorfulness_list = list()
 			dominant_colors_list = list()
 			print('Feed is %s post-long' % str(len(feed)))
@@ -163,6 +184,7 @@ class User(object):
 				self.commentscore = mean(comment_scores)
 				self.colorfulness_std = math.sqrt(np.var(np.array(colorfulness_list)))
 				self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
+				self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
 				self.colors_dispersion = self.__calcCentroid3d(self.colors)
 
 				print('Last post: %s' % self.__uiGetIlya(max(timestamps)))
@@ -185,6 +207,9 @@ class User(object):
 			pass
 
 	def getMostDominantColour(self, image):
+		"""
+		Retourne la couleur dominante de l'image.
+		"""
 		NUM_CLUSTERS = 5
 		image = image.resize((150, 150))
 		ar = np.array(image)
@@ -193,27 +218,21 @@ class User(object):
 
 		codes, dist = scipy.cluster.vq.kmeans(ar, NUM_CLUSTERS)
 
-		# assign codes
 		vecs, dist = scipy.cluster.vq.vq(ar, codes)         
-		# count occurrences
+
 		counts, bins = scipy.histogram(vecs, len(codes))    
 
 		index_max = scipy.argmax(counts)
 		peak = codes[index_max]
-		colour = ''.join(chr(int(c)) for c in peak).encode()
-		#print('most frequent is %s (#%s)' % (peak, colour))
-		#return peak
-		'''labs = list()
-		for code in codes:
-			rgb = sRGBColor(*code)
-			lab = convert_color(rgb, LabColor)
-			labs.append(lab)'''
 
 		rgb = sRGBColor(*peak)
 		lab = convert_color(rgb, LabColor)
 		return [lab]
 
 	def getImageColorfulness(self, image):
+		"""
+		Retoune l'intensité colorimétrique de l'image.
+		"""
 		ar = np.array(image)
 		open_cv_image = ar[:, :, ::-1].copy()
 		# split the image into its respective RGB components
@@ -232,11 +251,14 @@ class User(object):
 		return stdRoot + (0.3 * meanRoot)
 
 	def getBrandPresence(self, post):
+		"""
+		Retourne les mentions utilisateur qui matchent avec les utilisateurs mentionnés dans la description du post.
+		"""
 		brands = list()
 		try:
 			text = post['caption']['text']
 			usertags = ['@%s' % user['user']['username'] for user in post['usertags']['in']]
-			matches = regex.findall('@[\w\.]+', text)
+			matches = regex.findall(r'@[\w\.]+', text)
 			for match in matches:
 				if match in usertags:
 					brands.append(match.split('@')[1])
@@ -246,6 +268,9 @@ class User(object):
 			pass
 
 	def getBrandTypes(self, brands):
+		"""
+		Retourne les types de business que sont les 'marques' mentionnées à la fois dans la description du post et en mention utilisateur.
+		"""
 		brand_counter = Counter()
 		for brand in brands:
 			self.InstagramAPI.searchUsername(brand)
@@ -255,6 +280,9 @@ class User(object):
 		return brand_counter
 
 	def getCommentScore(self, comment):
+		"""
+		Retourne le score de commentaire basé sur le modèle de commentaires.
+		"""
 		if not os.path.isfile(os.path.join(comments_model_path)):
 			print('Creating comments model...')
 			self.createCommentsModel()
@@ -276,6 +304,9 @@ class User(object):
 		return k * comment_score
 
 	def createCommentsModel(self):
+		"""
+		Crée le modèle de commentaires.
+		"""
 		self.sqlClient.openCursor()
 		comments = self.sqlClient.getAllComments()
 		self.sqlClient.closeCursor()
@@ -300,6 +331,9 @@ class User(object):
 			pickle.dump(comment_count, outfile)
 
 	def processWordComment(self, word):
+		"""
+		Pré-processe le commentaire.
+		"""
 		if word[0] in ['#', '@']:
 			word = None
 		else:
@@ -311,6 +345,9 @@ class User(object):
 		return word
 
 	def getUserInfoSQL(self):
+		"""
+		On récupère les posts de l'utilisateur à partir de la BDD.
+		"""
 		self.sqlClient.openCursor()
 		user_sql = self.sqlClient.getUser(self.username)
 		pp.pprint(user_sql)
@@ -320,7 +357,9 @@ class User(object):
 			continue
 
 	def testCommentScore(self):
-		# Tool to test comment score
+		"""
+		Tooling permettant de tester les scores des commentaires utilisateur.
+		"""
 		while True:
 			text = input('Comment and I will tell your score ! (type \'exit\' to go next) : ')
 			if text == 'exit': 

@@ -22,7 +22,13 @@ pp = pprint.PrettyPrinter(indent=2)
 TTW = 8
 
 class Streamer(object):
+    """
+    Streamer class.
+    """
     def __init__(self):
+        """
+        __init__ function.
+        """
         super().__init__()
         # Login au compte Instagram du projet pour avoir accès à l'API
         username = 'project_bulb'
@@ -35,18 +41,26 @@ class Streamer(object):
         self.n_posts, self.n_authors, self.n_likes, self.n_comments = [0] * 4
         atexit.register(self.exit_handler)
 
-    # On ferme la session Postgre quand on quitte le script
     def exit_handler(self):
+        """
+        Ferme la session Postgre quand le script exit.
+        """
         print('Process ended ! Closing the session.')
         self.sqlClient.close()
         self.display_status()
 
     def display_status(self):
+        """
+        Affiche le statut du stream.
+        """
         tqdm.write('Number of posts and authors processed : %s,' % str(self.n_posts))
         tqdm.write('Number of likes processed : %s,' % str(self.n_likes))
         tqdm.write('Number of comments processed : %s' % str(self.n_comments))
 
     def process_post(self, post, topPost = False):
+        """
+        Traite le post Instagram.
+        """
         # Calcul du temps d'exécution de la fonction. On veut que le temps minimal d'exécution soit de 10s.
         time_start = time.time()
         
@@ -114,6 +128,9 @@ class Streamer(object):
         tqdm.write('\n')
 
     def stream_step(self, hashtag, getTopPosts, stepIndex):
+        """
+        Définit une étape du stream.
+        """
         # Récupération des top posts et des posts les plus récents liés au hashtag en question
         self.InstagramAPI.getHashtagFeed(hashtag)
         feed = self.InstagramAPI.LastJson
@@ -137,6 +154,9 @@ class Streamer(object):
         sys.stdout.write("\033[K")
 
     def start_stream(self):
+        """
+        Démarre le stream.
+        """
         i = 0
         while True:
             print('Step n°%s...' % str(i), flush = True)
