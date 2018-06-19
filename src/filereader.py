@@ -10,15 +10,16 @@ from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from statistics import mean
 
 pp = pprint.PrettyPrinter(indent = 2)
-NUM_CLUSTERS = 3
+NUM_CLUSTERS = 4
 
 '''with open('../models/users_sample.model', 'rb') as f:
 	_array = pickle.load(f)
 	pp.pprint(_array)'''
 
-users_list = ['stitchsmith.com.au', 'valberthe', 'glueandglitter', 'cirialostaunau', 'ozgekondakci', 'jimmyjummblz', 'domdraper666', 'gabrielleaguzar', 'serpilkrkll', 'kayfula_50']
+users_list = ['bannanas_fithk', 'valberthe', 'glueandglitter', 'cirialostaunau', 'ozgekondakci', 'jimmyjummblz', 'domdraper666', 'gabrielleaguzar', 'serpilkrkll', 'kayfula_50']
 influencers_list = ['its.pally', 'd_zheleva', 'dthompsy', 'mllegew', 'lisaster', 'evanranft', 'iamchouquette', 'coffeeandscarves', '_hellotiara', 'femkemegan']
 
 users_dist = list()
@@ -27,7 +28,7 @@ influencer_dist = list()
 user = User()
 
 for username in users_list:
-	user.username = user
+	user.username = username
 	user.getUserInfoIG()
 	colors = user.colors
 	arr1 = np.array(colors)
@@ -35,7 +36,7 @@ for username in users_list:
 	users_dist.append(dist1)
 
 for username in influencers_list:
-	user.username = user
+	user.username = username
 	user.getUserInfoIG()
 	colors = user.colors
 	arr1 = np.array(colors)
@@ -44,6 +45,13 @@ for username in influencers_list:
 
 print(users_dist)
 print(influencer_dist)
+
+user_mean = mean(users_dist)
+influencer_mean = mean(influencer_dist)
+
+print('___________')
+print(user_mean)
+print(influencer_mean)
 
 
 '''fig = plt.figure()

@@ -13,20 +13,35 @@ sys.path.append(os.path.dirname(__file__))
 
 class SqlClient(object):
 	def __init__(self):
+		"""
+		__init__ function.
+		"""
 		super().__init__()
 		self.conn = psycopg2.connect("dbname='bulb' user='Bulb' host='91.121.211.203' password='ddHbhWIjriGN6i9weHUM'")
 		self.hashtag = ''
 
 	def openCursor(self):
+		"""
+		Ouvre le curseur SQL du client.
+		"""
 		self.cursor = self.conn.cursor()
 
 	def closeCursor(self):
+		"""
+		Ferme le curseur SQL du client.
+		"""
 		self.cursor.close()
 
 	def setHashtag(self, hashtag):
+		"""
+		Définit le hashtag actuel.
+		"""
 		self.hashtag = hashtag
 
 	def insertPost(self, post, topPost = False):
+		"""
+		Insère un post en BDD.
+		"""
 		p__id, p__timestamp, p_media_type, p_text, p_small_img_url, p_tall_img_url, p_n_likes, p_n_comments, p_location, p_user_id, user_tags, sponsor_tags = get_post_fields(post)
 		self.cursor.execute('''
 			INSERT INTO posts (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin)
@@ -87,6 +102,9 @@ class SqlClient(object):
 			self.conn.commit()
 
 	def insertUserFeed(self, feed):
+		"""
+		Insère un feed de profil en BDD.
+		"""
 		for post in feed:
 			p__id, p__timestamp, p_media_type, p_text, p_small_img_url, p_tall_img_url, p_n_likes, p_n_comments, p_location, p_user_id, user_tags, sponsor_tags = get_post_fields(post)
 			self.cursor.execute('''
@@ -148,6 +166,9 @@ class SqlClient(object):
 		self.conn.commit()
 
 	def insertUser(self, user):
+		"""
+		Insère un utilisateur en BDD.
+		"""
 		u_id, u_user_name, u_full_name, u_is_private, u_is_verified, u_profile_pic_url, u_category, u_n_media, u_n_follower, u_n_following, u_is_business, u_biography, u_n_usertags, u_email, u_phone, u_city_id = get_user_fields(
 			user
 		)
@@ -197,6 +218,9 @@ class SqlClient(object):
 		self.conn.commit()
 
 	def insertComments(self, post_id, comments):
+		"""
+		Insère un commentaire en BDD.
+		"""
 		for comment in comments:
 			_id, comment_user_id, comment_text = get_comment_fields(comment)
 			self.cursor.execute('''
@@ -220,6 +244,9 @@ class SqlClient(object):
 			self.conn.commit()
 
 	def insertLikers(self, id_post, likers):
+		"""
+		Insère un like en BDD.
+		"""
 		for liker in likers:
 			id_user = get_liker_fields(liker)
 			_id = str(id_post) + str(id_user)
@@ -242,6 +269,9 @@ class SqlClient(object):
 		self.conn.commit()
 
 	def getUsers(self, n = 0):
+		"""
+		Récupère n utilisateurs de la BDD.
+		"""
 		if n > 0:
 			self.cursor.execute('''
 				SELECT * FROM users
@@ -250,6 +280,9 @@ class SqlClient(object):
 			return self.cursor.fetchall()
 
 	def getUser(self, username):
+		"""
+		Récupère un utilisateur en fonction de son nickname.
+		"""
 		self.cursor.execute('''
 			SELECT * FROM users as u
 			WHERE u.user_name = '%s'
@@ -257,6 +290,9 @@ class SqlClient(object):
 		return self.cursor.fetchone()
 
 	def getUserPosts(self, _id):
+		"""
+		Récupère tous les posts des utilisateurs.
+		"""
 		self.cursor.execute('''
 			SELECT * FROM posts as p
 			WHERE p.user_id = '%s'
@@ -264,6 +300,9 @@ class SqlClient(object):
 		return self.cursor.fetchall()
 
 	def getAverageFollowersPerUser(self):
+		"""
+		Récupère le nombre moyen de followers par utilisateur.
+		"""
 		self.cursor.execute('''
 			SELECT AVG(n_follower)
 			FROM users
@@ -273,6 +312,9 @@ class SqlClient(object):
 		print('Average number of followers: ', result)
 
 	def getAverageFollowingsPerUser(self):
+		"""
+		Récupère le nombre moyen d'abonnements par utilisateur.
+		"""
 		self.cursor.execute('''
 			SELECT AVG(n_following)
 			FROM users
@@ -282,6 +324,9 @@ class SqlClient(object):
 		print('Average number of followings: ', result)
 
 	def getAverageLikesPerPost(self):
+		"""
+		Récupère le nombre moyen de likes par post, ainsi que l'histogramme associé.
+		"""
 		self.cursor.execute(
 			'''
 			SELECT avg(count) FROM (
@@ -311,6 +356,9 @@ class SqlClient(object):
 		}
 
 	def getAverageCommentsPerPost(self):
+		"""
+		Récupère le nombre moyen de commentaires par post.
+		"""
 		self.cursor.execute('''
 			SELECT avg(count) FROM (
 				SELECT count(id_post) 
@@ -323,6 +371,9 @@ class SqlClient(object):
 		print('Average number of comments: ', result)
 
 	def getHashtagsDetails(self):
+		"""
+		Récupère la répartition des hashtags en BDD.
+		"""
 		self.cursor.execute('''
 			SELECT hashtag_origin, count(hashtag_origin) 
 			FROM posts
@@ -336,11 +387,17 @@ class SqlClient(object):
 		return _result
 		
 	def getAllComments(self):
+		"""
+		Récupère tous les commentaires de la BDD.
+		"""
 		self.cursor.execute('''
 			SELECT comment from comments
 		''')
 		return self.cursor.fetchall()
 	
 	def close(self):
+		"""
+		Ferme la connexion.
+		"""
 		self.closeCursor()
 		self.conn.close()
