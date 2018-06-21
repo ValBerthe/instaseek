@@ -4,7 +4,7 @@ from utils import *
 import pprint
 from tqdm import tqdm
 import time
-from statistics import mean
+from statistics import mean, stdev
 from sql_client import *
 import math
 import numpy as np
@@ -56,6 +56,13 @@ class User(object):
 		self.brandpresence = 0
 		self.brandtypes = 0
 		self.commentscore = 0
+
+		"""
+		Function parameters
+		"""
+		self.K = 0.17
+		self.K_ = 7
+		self.B = 0.5
 
 	def __uiFormatInt(self, n):
 		"""
@@ -112,25 +119,37 @@ class User(object):
 			time_temp_start = time.time()
 			self.InstagramAPI.searchUsername(username)
 			user_server = self.InstagramAPI.LastJson['user']
-			time.sleep(3)
+			time.sleep(1)
 			feed = self.InstagramAPI.getTotalUserFeed(user_server['pk'])
 			#feed = self.InstagramAPI.LastJson['items']
-			time.sleep(3)
+			time.sleep(1)
 			rates = list()
 			timestamps = list()
 			comment_scores = list()
 			brpscs = list()
 			colorfulness_list = list()
 			dominant_colors_list = list()
+			contrast_list = list()
 			print('Feed is %s post-long' % str(len(feed)))
-			for post in feed[:50]:
+			for index, post in enumerate(feed[:50]):
+				print('Post %s/%s...' % (index + 1, len(feed[:50])), end = '\r', flush = True)
 				try:
 					# Questionnement de l'API sur les champs du post
 					timestamps.append(int(post['taken_at']))
 					if user_server['follower_count'] == 0:
 						engagement_rate = 0
 					else:
-						engagement_rate = (int(post['like_count']) + int(post['comment_count'])) * 100 / user_server['follower_count']
+						k = 100 / user_server['follower_count']
+						if 'like_count' in post:
+							if 'comment_count' in post:
+								engagement_rate = (int(post['like_count']) + int(post['comment_count'])) * k
+							else:
+								engagement_rate = int(post['like_count']) * k
+						else:
+							if 'comment_count' in post:
+								engagement_rate = int(post['comment_count']) * k
+							else:
+								engagement_rate = 0
 					rates.append(engagement_rate)
 
 					# Image urls
@@ -138,11 +157,16 @@ class User(object):
 
 					response = requests.get(url)
 					img = Image.open(BytesIO(response.content))
+					grayscale_img = img.convert('LA')
+
 					most_dominant_colour = self.getMostDominantColour(img)
 					dominant_colors_list.extend(most_dominant_colour)
 
 					colorfulness = self.getImageColorfulness(img)
 					colorfulness_list.append(colorfulness)
+
+					contrast = self.getContrast(grayscale_img)
+					contrast_list.append(contrast)
 
 					# Brand presence
 					brpsc = self.getBrandPresence(post)
@@ -154,20 +178,21 @@ class User(object):
 					comments_server = self.InstagramAPI.LastJson
 
 					# Sleep to avoid 503 errors : too many requests
-					time.sleep(3)
-					for comment in comments_server['comments']:
-						if len(comment_scores) > 10:
-							break
-						if comment['user']['username'] == self.username:
-							continue
-						score = self.getCommentScore(comment['text'])
-						print(comment['text'])
-						print(score)
-						print('____________')
-						comment_scores.append(score)
-						time.sleep(2)
+					time.sleep(1)
+					if 'comments' in comments_server:
+						for comment in comments_server['comments']:
+							if len(comment_scores) > 10:
+								break
+							if comment['user']['username'] == self.username:
+								continue
+							score = self.getCommentScore(comment['text'])
+							comment_scores.append(score)
+							time.sleep(1)
 				except Exception as e:
-					print(e)
+					for i in range(60):
+						print('Something went wrong while getting user info... Waiting %s seconds before requesting server again.' % (60 - i), end='\r', flush=True)
+						time.sleep(1)
+					self.getUserInfoIG()
 					pass
 
 			# Assign and print features
@@ -181,12 +206,14 @@ class User(object):
 				self.usermentions = int(user_server['usertags_count'])
 				self.brandpresence = brpscs
 				self.brandtypes = self.getBrandTypes(brpscs)
-				self.commentscore = mean(comment_scores)
-				self.colorfulness_std = math.sqrt(np.var(np.array(colorfulness_list)))
+				self.commentscore = mean(comment_scores) * (1 + stdev(comment_scores))
+				self.colorfulness_std = stdev(colorfulness_list)
+				self.contrast_std = stdev(contrast_list)
 				self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
 				self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
 				self.colors_dispersion = self.__calcCentroid3d(self.colors)
 
+				print('Username : %s' % self.username)
 				print('Last post: %s' % self.__uiGetIlya(max(timestamps)))
 				print('Frequency: %.2f' % float(self.frequency))
 				print('Engagement: %.2f%%' % float(self.engagement))
@@ -197,8 +224,9 @@ class User(object):
 				print('Brand types: %s' % str(self.brandtypes))
 				print('Comments score: %s' % str(self.commentscore))
 				print('Colorfulness standard deviation: %s' % self.colorfulness_std)
-				print('Overall color dispersion : %s' % str(self.colors_dispersion))
-				print('\nClassification ended in %.2fs seconds' % float(time.time()) - float(time_temp_start))
+				print('Contrast standard deviation: %s' % self.contrast_std)
+				print('Overall color distorsion : %s' % str(self.color_distorsion))
+				print('\nFeature extraction ended in %.2fs seconds' % (float(time.time() - time_temp_start)))
 			else:
 				print('This user has no posts !')
 
@@ -235,20 +263,21 @@ class User(object):
 		"""
 		ar = np.array(image)
 		open_cv_image = ar[:, :, ::-1].copy()
-		# split the image into its respective RGB components
 		(B, G, R) = cv2.split(open_cv_image.astype("float"))
-		# compute rg = R - G
 		rg = np.absolute(R - G)
-		# compute yb = 0.5 * (R + G) - B
 		yb = np.absolute(0.5 * (R + G) - B)
-		# compute the mean and standard deviation of both `rg` and `yb`
 		(rbMean, rbStd) = (np.mean(rg), np.std(rg))
 		(ybMean, ybStd) = (np.mean(yb), np.std(yb))
-		# combine the mean and standard deviations
 		stdRoot = np.sqrt((rbStd ** 2) + (ybStd ** 2))
 		meanRoot = np.sqrt((rbMean ** 2) + (ybMean ** 2))
-		# derive the "colorfulness" metric and return it
 		return stdRoot + (0.3 * meanRoot)
+
+	def getContrast(self, img):
+		ar = np.array(img)
+		hist = np.histogram(ar)
+		data = hist[0]
+		data = data / data.sum()
+		return - (data * np.log(np.abs(data))).sum()
 
 	def getBrandPresence(self, post):
 		"""
@@ -264,7 +293,6 @@ class User(object):
 					brands.append(match.split('@')[1])
 			return brands
 		except Exception as e:
-			print(e)
 			pass
 
 	def getBrandTypes(self, brands):
@@ -300,8 +328,12 @@ class User(object):
 			comment_score = mean(word_scores)
 		else:
 			comment_score = 0
-		k = 1 - (1.5 * math.exp(- 0.5 * len(word_scores)))
-		return k * comment_score
+		k = 1 - math.exp(- self.K * len(word_scores))
+		j = 1 / (1 + math.exp(- self.K_ * (stdev(word_scores) - self.B) * (1 + mean(word_scores)))) if len(word_scores) > 1 else 0
+		i = 1 / (1 + math.exp(- self.K_ * (stdev(word_scores) - self.B))) if len(word_scores) > 1 else 0
+		#final_scores = [k * j * score for score in word_scores]
+		#print(mean(final_scores))
+		return k * j * comment_score
 
 	def createCommentsModel(self):
 		"""
@@ -334,7 +366,7 @@ class User(object):
 		"""
 		Pré-processe le commentaire.
 		"""
-		if word[0] in ['#', '@']:
+		if word[0] in ['#', '@'] or word in ['.', '!', '?', ',', ':', ';', '-', '+', '=', '/', '&', '@', '$', '_']:
 			word = None
 		else:
 			try:

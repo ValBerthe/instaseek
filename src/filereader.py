@@ -27,6 +27,9 @@ influencer_dist = list()
 
 user = User()
 
+user.createCommentsModel()
+user.testCommentScore()
+
 for username in users_list:
 	user.username = username
 	user.getUserInfoIG()
