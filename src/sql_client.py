@@ -6,6 +6,10 @@ import time
 import math
 from utils import *
 import pprint
+import requests
+
+from PIL import Image
+from io import BytesIO
 
 pp = pprint.PrettyPrinter(indent=2)
 sys.path.append(os.path.dirname(__file__))
@@ -42,7 +46,9 @@ class SqlClient(object):
 		"""
 		Insère un post en BDD.
 		"""
+
 		p__id, p__timestamp, p_media_type, p_text, p_small_img_url, p_tall_img_url, p_n_likes, p_n_comments, p_location, p_user_id, user_tags, sponsor_tags = get_post_fields(post)
+
 		self.cursor.execute('''
 			INSERT INTO posts (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin)
 			VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -100,13 +106,34 @@ class SqlClient(object):
 				)
 			)
 			self.conn.commit()
+		
+		url = get_post_image_url(post)
+		response = requests.get(url)
+
+		self.cursor.execute('''
+			INSERT INTO images (url, post_id, image)
+			VALUES (%s, %s, %s)
+			ON CONFLICT (url) DO UPDATE
+			SET (url, post_id, image) = (%s, %s, %s)
+		''',
+		(
+			str(url),
+			str(p__id),
+			response.content,
+			# for udpate
+			str(url),
+			str(p__id),
+			response.content
+		))
 
 	def insertUserFeed(self, feed):
 		"""
 		Insère un feed de profil en BDD.
 		"""
 		for post in feed:
+			
 			p__id, p__timestamp, p_media_type, p_text, p_small_img_url, p_tall_img_url, p_n_likes, p_n_comments, p_location, p_user_id, user_tags, sponsor_tags = get_post_fields(post)
+
 			self.cursor.execute('''
 				INSERT INTO posts (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin)
 				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -163,6 +190,25 @@ class SqlClient(object):
 						str(id_user_tag)
 					)
 				)
+
+			url = get_post_image_url(post)
+			response = requests.get(url)
+
+			self.cursor.execute('''
+				INSERT INTO images (url, post_id, image)
+				VALUES (%s, %s, %s)
+				ON CONFLICT (url) DO UPDATE
+				SET (url, post_id, image) = (%s, %s, %s)
+			''',
+			(
+				str(url),
+				str(p__id),
+				response.content,
+				# for udpate
+				str(url),
+				str(p__id),
+				response.content
+			))
 		self.conn.commit()
 
 	def insertUser(self, user):
@@ -268,6 +314,17 @@ class SqlClient(object):
 			)
 		self.conn.commit()
 
+	def setLabel(self, username, label):
+		"""
+		Annote l'utilisateur en influenceur (1)/non influenceur (0).
+		"""
+		self.cursor.execute('''
+			UPDATE users as u
+			SET label = '%s'
+			WHERE u.user_name = '%s'
+		''' % (str(label), username))
+		self.conn.commit()
+
 	def getUsers(self, n = 0):
 		"""
 		Récupère n utilisateurs de la BDD.
@@ -278,7 +335,23 @@ class SqlClient(object):
 				ORDER BY id DESC LIMIT %s
 			''' % str(n))
 			return self.cursor.fetchall()
-
+	
+	def getUsernameUrls(self):
+		"""
+		Récupère une liste d'adresses URL de profils en BDD.
+		"""
+		self.cursor.execute('''
+			SELECT user_name FROM public.users as u
+			WHERE (
+				SELECT count(*) FROM public.images AS i
+				WHERE i.post_id in (
+					SELECT id FROM public.posts AS p
+					WHERE p.user_id = u.id
+				)
+			) > 0 AND u.label = -1
+		''')
+		return ['http://www.instagram.com/%s' % name for name in self.cursor.fetchall()]
+	
 	def getUser(self, username):
 		"""
 		Récupère un utilisateur en fonction de son nickname.
@@ -287,16 +360,93 @@ class SqlClient(object):
 			SELECT * FROM users as u
 			WHERE u.user_name = '%s'
 		''' % username)
-		return self.cursor.fetchone()
+		values = self.cursor.fetchone()
+		keys = [desc[0] for desc in self.cursor.description]
+		return dict(zip(keys, values))
 
 	def getUserPosts(self, _id):
 		"""
 		Récupère tous les posts des utilisateurs.
+		Retourne : {
+			id: ...
+			timestamps: ...
+			media_type: ...
+			small_img_url: ...
+			tall_img_url: ...
+			n_likes: ...
+			n_comments: ...
+			location: ...
+			user_id: ...
+			text: ...
+			is_top_post: ...
+			hashtag_origin: ...
+			timestamp_inserted_at: ...
+			image: ...
+		}
 		"""
+		self.cursor.execute('''
+			SELECT * FROM posts
+			WHERE false
+		''')
+		keys = [desc[0] for desc in self.cursor.description]
 		self.cursor.execute('''
 			SELECT * FROM posts as p
 			WHERE p.user_id = '%s'
 		''' % str(_id))
+		values = self.cursor.fetchall()
+		posts = list()
+		for post in values:
+			post = dict(zip(keys, post))
+			self.cursor.execute('''
+				SELECT image FROM images as i
+				WHERE i.post_id = '%s'
+			''' % post['id'])
+			image = self.cursor.fetchone()
+			post['image'] = image
+			posts.append(post)
+		return posts
+
+	def getAllUsers(self):
+		"""
+		Retourne les utilisateurs annotables.
+		"""
+		self.cursor.execute('''
+			SELECT * FROM public.users as u
+			WHERE (
+				SELECT count(*) FROM public.images AS i
+				WHERE i.post_id in (
+					SELECT id FROM public.posts AS p
+					WHERE p.user_id = u.id
+				)
+			) > 0 AND u.label > -1
+		''')
+		values = self.cursor.fetchall()
+		keys = [desc[0] for desc in self.cursor.description]
+		return [dict(zip(keys, value)) for value in values]
+
+	def getComments(self, post_id):
+		"""
+		Retourne les commentaires du post.
+		"""
+		self.cursor.execute('''
+			SELECT * from public.comments as c
+			WHERE c.id_post = '%s'
+		''' % post_id)
+		values = self.cursor.fetchall()
+		keys = [desc[0] for desc in self.cursor.description]
+		return [dict(zip(keys, value)) for value in values]
+
+	def getUserPostComments(self, user_id):
+		"""
+		Retourne tous les commentaires que l'utilisateur a eu sur ses posts.
+		"""
+		self.cursor.execute('''
+			SELECT * FROM public.comments AS c
+			WHERE c.id_post IN (
+				SELECT (id) FROM public.posts AS p
+				WHERE p.user_id = '%s'
+			)
+		''' % user_id)
 		return self.cursor.fetchall()
 
 	def getAverageFollowersPerUser(self):

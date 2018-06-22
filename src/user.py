@@ -109,6 +109,12 @@ class User(object):
 		centroid = np.array([sum_x/length, sum_y/length, sum_z/length])
 		distances = [np.linalg.norm(data - centroid) for data in listie]
 		return mean(distances)
+	
+	def getUserNames(self):
+		self.sqlClient.openCursor()
+		allusers = self.sqlClient.getAllUsers()
+		self.sqlClient.closeCursor()
+		return allusers
 
 	def getUserInfoIG(self):
 		"""
@@ -153,20 +159,24 @@ class User(object):
 					rates.append(engagement_rate)
 
 					# Image urls
-					url = get_post_image_url(post)
+					try:
+						url = get_post_image_url(post)
 
-					response = requests.get(url)
-					img = Image.open(BytesIO(response.content))
-					grayscale_img = img.convert('LA')
+						response = requests.get(url)
+						img = Image.open(BytesIO(response.content))
+						grayscale_img = img.convert('LA')
 
-					most_dominant_colour = self.getMostDominantColour(img)
-					dominant_colors_list.extend(most_dominant_colour)
+						most_dominant_colour = self.getMostDominantColour(img)
+						dominant_colors_list.extend(most_dominant_colour)
 
-					colorfulness = self.getImageColorfulness(img)
-					colorfulness_list.append(colorfulness)
+						colorfulness = self.getImageColorfulness(img)
+						colorfulness_list.append(colorfulness)
 
-					contrast = self.getContrast(grayscale_img)
-					contrast_list.append(contrast)
+						contrast = self.getContrast(grayscale_img)
+						contrast_list.append(contrast)
+					except Exception as e:
+						print('Error while getting image info (user.py): %s' % e)
+
 
 					# Brand presence
 					brpsc = self.getBrandPresence(post)
@@ -189,10 +199,13 @@ class User(object):
 							comment_scores.append(score)
 							time.sleep(1)
 				except Exception as e:
-					for i in range(60):
-						print('Something went wrong while getting user info... Waiting %s seconds before requesting server again.' % (60 - i), end='\r', flush=True)
-						time.sleep(1)
-					self.getUserInfoIG()
+					j = 0
+					while j < 4:
+						for i in range(60):
+							print('Something went wrong while getting post info:\n%s\nWaiting %s seconds before requesting server again.' % (e, (60 - i)), end='\r', flush=True)
+							time.sleep(1)
+						j += 1
+						self.getUserInfoIG()
 					pass
 
 			# Assign and print features
@@ -233,6 +246,112 @@ class User(object):
 		except Exception as e:
 			print(e)
 			pass
+	
+	def getUserInfoSQL(self):
+		"""
+		On récupère les posts de l'utilisateur à partir de la BDD.
+		"""
+		self.sqlClient.openCursor()
+		user_sql = self.sqlClient.getUser(self.username)
+		posts = self.sqlClient.getUserPosts(user_sql['id'])
+		rates = list()
+		timestamps = list()
+		comment_scores = list()
+		brpscs = list()
+		colorfulness_list = list()
+		dominant_colors_list = list()
+		contrast_list = list()
+
+		for post in posts:
+			# Timestamps and engagement rates
+			timestamps.append(int(post['timestamp']))
+			if user_sql['n_follower'] == 0:
+				engagement_rate = 0
+			else:
+				k = 100 / user_sql['n_follower']
+				if 'n_likes' in post:
+					if 'n_comments' in post:
+						engagement_rate = (int(post['n_likes']) + int(post['n_comments'])) * k
+					else:
+						engagement_rate = int(post['n_likes']) * k
+				else:
+					if 'n_comments' in post:
+						engagement_rate = int(post['n_comments']) * k
+					else:
+						engagement_rate = 0
+			rates.append(engagement_rate)
+
+			# Image urls
+			img = post['image']
+			if (img):
+				img = Image.open(BytesIO(img[0]))
+				grayscale_img = img.convert('LA')
+
+				most_dominant_colour = self.getMostDominantColour(img)
+				dominant_colors_list.extend(most_dominant_colour)
+
+				colorfulness = self.getImageColorfulness(img)
+				if not math.isnan(colorfulness):
+					colorfulness_list.append(colorfulness)
+
+				contrast = self.getContrast(grayscale_img)
+				if not math.isnan(contrast):
+					contrast_list.append(contrast)
+
+			
+			# Brand presence
+			'''brpsc = self.getBrandPresence(post)
+			if brpsc:
+				brpscs.extend(brpsc)'''
+
+			# Get comment scores
+			comments = self.sqlClient.getComments(str(post['id']))
+			for comment in comments:
+				if comment['id_user'] == post['user_id']:
+					continue
+				score = self.getCommentScore(comment['comment'])
+				comment_scores.append(score)
+			if len(comment_scores) > 1:
+				commentscore = mean(comment_scores) * (1 + stdev(comment_scores))
+			elif len(comment_scores) == 1:
+				commentscore = comment_scores[0]
+			else:
+				commentscore = 0
+			
+		# Assign and print features
+		if len(rates) > 0:
+			avg = mean(rates)
+			self.lastpost = time.time() - max(timestamps)
+			self.frequency =  self.__calculateFrequency(len(posts), min(timestamps))
+			self.engagement = avg
+			self.followings = int(user_sql['n_following'])
+			self.followers = int(user_sql['n_follower'])
+			self.usermentions = int(user_sql['n_usertags'])
+			self.brandpresence = brpscs
+			self.brandtypes = self.getBrandTypes(brpscs)
+			self.commentscore = commentscore
+			self.colorfulness_std = stdev(colorfulness_list)
+			self.contrast_std = stdev(contrast_list)
+			self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
+			self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
+			self.colors_dispersion = self.__calcCentroid3d(self.colors)
+			self.label = int(user_sql['label'])
+			'''
+			print('Username : %s' % self.username)
+			print('Last post: %s' % self.__uiGetIlya(max(timestamps)))
+			print('Frequency: %.2f' % float(self.frequency))
+			print('Engagement: %.2f%%' % float(self.engagement))
+			print('N followings: %s' % self.__uiFormatInt(self.followings))
+			print('N followers: %s' % self.__uiFormatInt(self.followers))
+			print('User mentions: %s' % self.__uiFormatInt(self.usermentions))
+			print('Brand presence: %s' % str(self.brandpresence))
+			print('Brand types: %s' % str(self.brandtypes))
+			print('Comments score: %s' % str(self.commentscore))
+			print('Colorfulness standard deviation: %s' % self.colorfulness_std)
+			print('Contrast standard deviation: %s' % self.contrast_std)
+			print('Overall color distorsion : %s' % str(self.color_distorsion))'''
+		else:
+			print('This user has no posts !')
 
 	def getMostDominantColour(self, image):
 		"""
@@ -375,18 +494,6 @@ class User(object):
 			except:
 				word = word
 		return word
-
-	def getUserInfoSQL(self):
-		"""
-		On récupère les posts de l'utilisateur à partir de la BDD.
-		"""
-		self.sqlClient.openCursor()
-		user_sql = self.sqlClient.getUser(self.username)
-		pp.pprint(user_sql)
-		posts = self.sqlClient.getUserPosts(user_sql[0])
-		pp.pprint(posts)
-		for post in posts:
-			continue
 
 	def testCommentScore(self):
 		"""

@@ -154,5 +154,5 @@ def get_random_hashtags():
 
 def get_post_image_url(post):
 	if post['media_type'] == 8:
-		return post['carousel_media'][0]['image_versions2']['candidates'][0]['url']
-	return post['image_versions2']['candidates'][0]['url']
+		return post['carousel_media'][0]['image_versions2']['candidates'][1]['url']
+	return post['image_versions2']['candidates'][1]['url']
