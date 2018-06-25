@@ -29,6 +29,8 @@ sys.path.append(os.path.dirname(__file__))
 comments_model_path = os.path.join(os.path.dirname(__file__), '../models/comments.model')
 users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
 
+N_CLUSTERS = 3
+
 class User(object):
 	"""
 	Classe utilisateur.
@@ -44,7 +46,7 @@ class User(object):
 		self.InstagramAPI = InstagramAPI(igusername, igpassword)
 		self.InstagramAPI.login()
 		self.sqlClient = SqlClient()
-		self.n_clusters = 4
+		self.n_clusters = N_CLUSTERS
 
 		# Features pour l'apprentissage
 		self.lastpost = 0
@@ -111,6 +113,9 @@ class User(object):
 		return mean(distances)
 	
 	def getUserNames(self):
+		"""
+		Récupère les usrnames des utilisateurs annotés.
+		"""
 		self.sqlClient.openCursor()
 		allusers = self.sqlClient.getAllUsers()
 		self.sqlClient.closeCursor()
@@ -249,11 +254,17 @@ class User(object):
 	
 	def getUserInfoSQL(self):
 		"""
-		On récupère les posts de l'utilisateur à partir de la BDD.
+		On récupère les posts de l'utilisateur à partir de la BDD, et on en extrait les features nécessaires pour l'apprentissage.
+		L'intérêt de cette méthode est qu'on peut solliciter la BDD très vite par rapport à l'API Instagram, ce qui nous permet de faire un
+		apprentissage 'rapide'!
 		"""
 		self.sqlClient.openCursor()
 		user_sql = self.sqlClient.getUser(self.username)
 		posts = self.sqlClient.getUserPosts(user_sql['id'])
+
+		"""
+		Initialisation des listes de stockage pour les métriques.
+		"""
 		rates = list()
 		timestamps = list()
 		comment_scores = list()
@@ -263,7 +274,9 @@ class User(object):
 		contrast_list = list()
 
 		for post in posts:
-			# Timestamps and engagement rates
+			"""
+			Timestamps et taux d'engagement: métriques immédiates.
+			"""
 			timestamps.append(int(post['timestamp']))
 			if user_sql['n_follower'] == 0:
 				engagement_rate = 0
@@ -281,7 +294,12 @@ class User(object):
 						engagement_rate = 0
 			rates.append(engagement_rate)
 
-			# Image urls
+			"""
+			On récupère le code binaire des images en BDD, et on y opère les traitements :
+			- STD du contraste
+			- STD de l'intensité colorimétrique
+			- Distorsion des clusters de couleur
+			"""
 			img = post['image']
 			if (img):
 				img = Image.open(BytesIO(img[0]))
@@ -300,9 +318,14 @@ class User(object):
 
 			
 			# Brand presence
-			'''brpsc = self.getBrandPresence(post)
+			"""
+			Pour l'instant on ne s'en sert pas, à ré-utiliser quand on s'intéressera à la détection des placements de produits.
+			"""
+			"""
+			brpsc = self.getBrandPresence(post)
 			if brpsc:
-				brpscs.extend(brpsc)'''
+				brpscs.extend(brpsc)
+			"""
 
 			# Get comment scores
 			comments = self.sqlClient.getComments(str(post['id']))
@@ -319,11 +342,26 @@ class User(object):
 				commentscore = 0
 			
 		# Assign and print features
+		"""
+		self.engagement : Le taux d'engagement sur le feed : n_likes + n_comments / n_followers.
+		self.lastpost : le timestamp POSIX du dernier post.
+		self.frequency : la fréquence de psot sur le feed.
+		self.followers : le nombre de followers.
+		self.followings : le nombre d'abonnements de l'utilisateur.
+		self.usermentions : le nombre de mentions utilisateur.
+		self.brandpresence : la liste des comptes, potentiellement des marques, avec qui l'influenceur fait des placements de produit.
+		self.brandtypes : le type de marques que l'utilisateur tague.
+		self.commentscore : le score de commentaires moyen que reçoit l'utilisateur.
+		self.colorfulness_std : l'intensité de couleurs sur le feed (écart-type).
+		self.contrast_std : le contraste sur les photos du feed (écart-type).
+		self.color_distorsion : la distorsion des clusters de couleur.
+		self.label : la catégorie de l'utilisateur.
+		"""
 		if len(rates) > 0:
 			avg = mean(rates)
-			self.lastpost = time.time() - max(timestamps)
-			self.frequency =  self.__calculateFrequency(len(posts), min(timestamps))
 			self.engagement = avg
+			self.lastpost = time.time() - max(timestamps)
+			self.frequency =  self.__calculateFrequency(len(posts), min(timestamps))		
 			self.followings = int(user_sql['n_following'])
 			self.followers = int(user_sql['n_follower'])
 			self.usermentions = int(user_sql['n_usertags'])
@@ -333,23 +371,23 @@ class User(object):
 			self.colorfulness_std = stdev(colorfulness_list)
 			self.contrast_std = stdev(contrast_list)
 			self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
-			self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
+			
+			"""
+			Ici, on cherche à avoir la distorsion des k-means des couleurs du feed.
+			Parfois, on peut avoir que une ou deux couleurs outputées du k-mean.
+			Si on a une erreur, on baisse le nombre de clusters jusqu'à ce que le k-mean puisse être opéré.
+			"""
+			while True:
+				try:
+					if (self.n_clusters == 0):
+						break
+					self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
+				except:
+					self.n_clusters = self.n_clusters - 1
+					continue
+				break
 			self.colors_dispersion = self.__calcCentroid3d(self.colors)
 			self.label = int(user_sql['label'])
-			'''
-			print('Username : %s' % self.username)
-			print('Last post: %s' % self.__uiGetIlya(max(timestamps)))
-			print('Frequency: %.2f' % float(self.frequency))
-			print('Engagement: %.2f%%' % float(self.engagement))
-			print('N followings: %s' % self.__uiFormatInt(self.followings))
-			print('N followers: %s' % self.__uiFormatInt(self.followers))
-			print('User mentions: %s' % self.__uiFormatInt(self.usermentions))
-			print('Brand presence: %s' % str(self.brandpresence))
-			print('Brand types: %s' % str(self.brandtypes))
-			print('Comments score: %s' % str(self.commentscore))
-			print('Colorfulness standard deviation: %s' % self.colorfulness_std)
-			print('Contrast standard deviation: %s' % self.contrast_std)
-			print('Overall color distorsion : %s' % str(self.color_distorsion))'''
 		else:
 			print('This user has no posts !')
 
@@ -364,11 +402,8 @@ class User(object):
 		ar = ar.reshape(scipy.product(shape[:2]), shape[2]).astype(float)
 
 		codes, dist = scipy.cluster.vq.kmeans(ar, NUM_CLUSTERS)
-
 		vecs, dist = scipy.cluster.vq.vq(ar, codes)         
-
 		counts, bins = scipy.histogram(vecs, len(codes))    
-
 		index_max = scipy.argmax(counts)
 		peak = codes[index_max]
 
@@ -392,6 +427,10 @@ class User(object):
 		return stdRoot + (0.3 * meanRoot)
 
 	def getContrast(self, img):
+		"""
+		Retourne le contraste global de l'image.
+		Passe par un calcul d'entropie.
+		"""
 		ar = np.array(img)
 		hist = np.histogram(ar)
 		data = hist[0]
@@ -448,10 +487,7 @@ class User(object):
 		else:
 			comment_score = 0
 		k = 1 - math.exp(- self.K * len(word_scores))
-		j = 1 / (1 + math.exp(- self.K_ * (stdev(word_scores) - self.B) * (1 + mean(word_scores)))) if len(word_scores) > 1 else 0
-		i = 1 / (1 + math.exp(- self.K_ * (stdev(word_scores) - self.B))) if len(word_scores) > 1 else 0
-		#final_scores = [k * j * score for score in word_scores]
-		#print(mean(final_scores))
+		j = 1 / (1 + math.exp(- self.K_ * (stdev(word_scores) - self.B))) if len(word_scores) > 1 else 0
 		return k * j * comment_score
 
 	def createCommentsModel(self):
@@ -489,7 +525,9 @@ class User(object):
 			word = None
 		else:
 			try:
-				# Ici ça pète quand il y a du russe ou des emojis. 
+				"""
+				Ici ça pète quand il y a du russe ou des emojis.
+				"""
 				word = str(word).lower()
 			except:
 				word = word
