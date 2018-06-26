@@ -4,6 +4,8 @@ import pandas as pd
 import pickle
 import pprint
 
+sys.path.append(os.path.dirname(__file__))
+
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -13,7 +15,6 @@ from tqdm import tqdm
 from user import User
 
 pp = pprint.PrettyPrinter(indent = 2)
-sys.path.append(os.path.dirname(__file__))
 
 xl_path = os.path.join(os.path.dirname(__file__), '../res/iguserssample.xlsx')
 model_path = os.path.join(os.path.dirname(__file__), '../models/classifier.model')
@@ -22,6 +23,9 @@ labels_model_path = os.path.join(os.path.dirname(__file__), '../models/labels.mo
 ig_url = 'http://www.instagram.com/'
 
 class Trainer(object):
+	"""
+	Classe d'entraînement du modèle de détection des influenceurs.
+	"""
 	def __init__(self):
 		"""
 		__init__ function
@@ -31,13 +35,13 @@ class Trainer(object):
 
 	def buildUsersModel(self):
 		"""
-		Construit la liste des utilisateurs utile pour l'entrainement, avec les features correspondantes 
+		Construit la liste des utilisateurs utile pour l'entrainement, avec les features correspondantes.
 		"""
 
-		self.n_split = 70
+		self.n_split = 150
 
 		"""
-		On récupère toutes les features nécessaires pour entraîner le modèle
+		On récupère toutes les features nécessaires pour entraîner le modèle.
 		"""
 		self.user_model = User()
 
@@ -82,60 +86,26 @@ class Trainer(object):
 			features_array.append(features)
 			labels.append(user['label'])
 
-		# train classifier
-		print(len(features_array))
-		c = [1, 10, 15, 20, 30, 50, 100, 200, 300, 500]
-		for n in c:
-			clf = RandomForestClassifier(n_estimators = n)
-			clf.fit(features_array[:self.n_split], labels[:self.n_split])
-			importance = clf.feature_importances_
-			score = clf.score(features_array[self.n_split:], labels[self.n_split:])
-			print(score)
+		"""
+		Entraînement du modèle.
+		"""
+		clf = RandomForestClassifier(n_estimators = 500)
+		clf.fit(features_array[:self.n_split], labels[:self.n_split])
+		importance = clf.feature_importances_
+		score = clf.score(features_array[self.n_split:], labels[self.n_split:])
+		print(score)
 		pred = clf.predict(features_array[self.n_split:])
 		print('\n%s\n' % str(pred))
 		print(confusion_matrix(labels[self.n_split:], pred))
 		print('\n')
-		for couple in zip(key_features, importance):
+		for couple in zip(self.key_features, importance):
 			print('________ %s' % str((couple[0], '%.2f%%' % float(100 * couple[1]))))
 		print('\n')
 		print(classification_report(labels[self.n_split:], pred))
 		with open(model_path, 'wb') as __f:
 			pickle.dump(clf, __f)
 
-	def train_model():
-		self.n_split = 372
-		with open(users_model_path, 'rb') as f:
-			users_array = pickle.load(f)
-			features_array = list()
-			labels = list()
-			for user in users_array:
-				features = list()
-				for key in key_features:
-					features.append(user[key])
-				features_array.append(features)
-				labels.append(user['label'])
-
-			# train classifier
-			print(len(features_array))
-			c = [1, 10, 15, 20, 30, 50, 100, 200, 300, 500]
-			for n in c:
-				clf = RandomForestClassifier(n_estimators = n)
-				clf.fit(features_array[:self.n_split], labels[:self.n_split])
-				importance = clf.feature_importances_
-				score = clf.score(features_array[self.n_split:], labels[self.n_split:])
-				print(score)
-			pred = clf.predict(features_array[self.n_split:])
-			print('\n%s\n' % str(pred))
-			print(confusion_matrix(labels[self.n_split:], pred))
-			print('\n')
-			for couple in zip(key_features, importance):
-				print('________ %s' % str((couple[0], '%.2f%%' % float(100 * couple[1]))))
-			print('\n')
-			print(classification_report(labels[self.n_split:], pred))
-			with open(model_path, 'wb') as __f:
-				pickle.dump(clf, __f)
-
-	def classify_user():
+	def classify_user(self):
 		with open(model_path, 'rb') as f:
 			clf = pickle.load(f)
 			while True:
@@ -155,9 +125,7 @@ class Trainer(object):
 					user.color_distorsion
 				]]
 				pred = clf.predict(vector)
-				print('_______________________________')
-				print('IS INFLUENCER ?')
-				print(pred)
+				print('%s' % ('Yes' if pred == 1 else 'No'))
 
 if __name__ == "__main__":
 	trainer = Trainer()

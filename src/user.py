@@ -1,31 +1,33 @@
 import pickle
-from InstagramAPI import InstagramAPI
-from utils import *
 import pprint
-from tqdm import tqdm
 import time
-from statistics import mean, stdev
-from sql_client import *
 import math
 import numpy as np
 import regex
 import sys
 import os
-from PIL import Image
-import requests
-from io import BytesIO
-from collections import Counter
 import scipy
 import scipy.misc
 import scipy.cluster
 import cv2
+import matplotlib.pyplot as plt
+import requests
+
+sys.path.append(os.path.dirname(__file__))
+
+from sql_client import SqlClient
+from utils import *
+from InstagramAPI import InstagramAPI
+from tqdm import tqdm
+from statistics import mean, stdev
+from PIL import Image
+from io import BytesIO
+from collections import Counter
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 pp = pprint.PrettyPrinter(indent=2)
-sys.path.append(os.path.dirname(__file__))
 comments_model_path = os.path.join(os.path.dirname(__file__), '../models/comments.model')
 users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
 
@@ -273,7 +275,7 @@ class User(object):
 		dominant_colors_list = list()
 		contrast_list = list()
 
-		for post in posts:
+		for index, post in enumerate(posts):
 			"""
 			Timestamps et taux d'engagement: métriques immédiates.
 			"""
@@ -301,23 +303,24 @@ class User(object):
 			- Distorsion des clusters de couleur
 			"""
 			img = post['image']
-			if (img):
-				img = Image.open(BytesIO(img[0]))
-				grayscale_img = img.convert('LA')
+			if img:
+				try:
+					img = Image.open(BytesIO(img[0]))
+					grayscale_img = img.convert('LA')
 
-				most_dominant_colour = self.getMostDominantColour(img)
-				dominant_colors_list.extend(most_dominant_colour)
+					most_dominant_colour = self.getMostDominantColour(img)
+					dominant_colors_list.extend(most_dominant_colour)
 
-				colorfulness = self.getImageColorfulness(img)
-				if not math.isnan(colorfulness):
-					colorfulness_list.append(colorfulness)
+					colorfulness = self.getImageColorfulness(img)
+					if not math.isnan(colorfulness):
+						colorfulness_list.append(colorfulness)
 
-				contrast = self.getContrast(grayscale_img)
-				if not math.isnan(contrast):
-					contrast_list.append(contrast)
+					contrast = self.getContrast(grayscale_img)
+					if not math.isnan(contrast):
+						contrast_list.append(contrast)
+				except Exception as e:
+					print('Error while trying to retrieve %s\'s image n°%s : %s' % (str(self.username), str(index), e))
 
-			
-			# Brand presence
 			"""
 			Pour l'instant on ne s'en sert pas, à ré-utiliser quand on s'intéressera à la détection des placements de produits.
 			"""
@@ -327,7 +330,7 @@ class User(object):
 				brpscs.extend(brpsc)
 			"""
 
-			# Get comment scores
+
 			comments = self.sqlClient.getComments(str(post['id']))
 			for comment in comments:
 				if comment['id_user'] == post['user_id']:

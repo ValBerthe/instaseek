@@ -4,12 +4,14 @@ import sys
 import os
 import time
 import math
-from utils import *
 import pprint
 import requests
 
+sys.path.append(os.path.dirname(__file__))
+
 from PIL import Image
 from io import BytesIO
+from utils import *
 
 pp = pprint.PrettyPrinter(indent=2)
 sys.path.append(os.path.dirname(__file__))

@@ -1,18 +1,21 @@
 import imageio
 import json
 imageio.plugins.ffmpeg.download()
-from InstagramAPI import InstagramAPI
 import getpass
 import os
 import sys
 import time
 import atexit
 import math
-from random import randint
-from tqdm import tqdm
 import gc
 import pprint
 import psycopg2
+
+sys.path.append(os.path.dirname(__file__))
+
+from InstagramAPI import InstagramAPI
+from random import randint
+from tqdm import tqdm
 from utils import *
 from sql_client import *
 
