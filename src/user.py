@@ -12,6 +12,7 @@ import scipy.cluster
 import cv2
 import matplotlib.pyplot as plt
 import requests
+import configparser
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -30,6 +31,7 @@ from mpl_toolkits.mplot3d import Axes3D
 pp = pprint.PrettyPrinter(indent=2)
 comments_model_path = os.path.join(os.path.dirname(__file__), '../models/comments.model')
 users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
+config_path = os.path.join(os.path.dirname(__file__), '.config.ini')
 
 N_CLUSTERS = 3
 
@@ -42,8 +44,10 @@ class User(object):
 		__init__ function.
 		"""
 		super().__init__()
-		igusername = 'project_bulb'
-		igpassword = '=Xx4>+Arw:N7mrM4'
+		self.config = configparser.ConfigParser()
+		self.config.read(config_path)
+		igusername = self.config['Instagram']['user']
+		igpassword = self.config['Instagram']['password']
 		self.username = ''
 		self.InstagramAPI = InstagramAPI(igusername, igpassword)
 		self.InstagramAPI.login()
@@ -134,7 +138,6 @@ class User(object):
 			user_server = self.InstagramAPI.LastJson['user']
 			time.sleep(1)
 			feed = self.InstagramAPI.getTotalUserFeed(user_server['pk'])
-			#feed = self.InstagramAPI.LastJson['items']
 			time.sleep(1)
 			rates = list()
 			timestamps = list()
@@ -146,8 +149,11 @@ class User(object):
 			print('Feed is %s post-long' % str(len(feed)))
 			for index, post in enumerate(feed[:50]):
 				print('Post %s/%s...' % (index + 1, len(feed[:50])), end = '\r', flush = True)
+
+				"""
+				Si le serveur renvoie une erreur (notamment 503), on attend 1 minute avant de renvoyer une requête.
+				"""
 				try:
-					# Questionnement de l'API sur les champs du post
 					timestamps.append(int(post['taken_at']))
 					if user_server['follower_count'] == 0:
 						engagement_rate = 0
@@ -165,7 +171,9 @@ class User(object):
 								engagement_rate = 0
 					rates.append(engagement_rate)
 
-					# Image urls
+					"""
+					Récupère les variables binaires représentant les images.
+					"""
 					try:
 						url = get_post_image_url(post)
 
@@ -185,26 +193,46 @@ class User(object):
 						print('Error while getting image info (user.py): %s' % e)
 
 
-					# Brand presence
+					"""
+					Fetch les marques détectées dans les posts.
+					"""
 					brpsc = self.getBrandPresence(post)
 					if brpsc:
 						brpscs.extend(brpsc)
 
-					# Get comment scores
+					"""
+					On récupère le score de commentaires sur tout le feed de l'utilisateur.
+					"""
 					self.InstagramAPI.getMediaComments(str(post['id']))
 					comments_server = self.InstagramAPI.LastJson
 
-					# Sleep to avoid 503 errors : too many requests
+					"""
+					Sleep pour éviter les erreurs 503.
+					"""
 					time.sleep(1)
+					
+					"""
+					On cherche tous les commentaires retournés dans la variable `comments_server`.
+					"""
 					if 'comments' in comments_server:
+
 						for comment in comments_server['comments']:
+							"""
+							On ne prend que les 10 premier commentaires pour chaque post.
+							"""
 							if len(comment_scores) > 10:
 								break
+
+							"""
+							Si la personne qui commente est l'auteur du post, alors on ignore le commentaire.
+							"""
 							if comment['user']['username'] == self.username:
 								continue
+
 							score = self.getCommentScore(comment['text'])
 							comment_scores.append(score)
 							time.sleep(1)
+
 				except Exception as e:
 					j = 0
 					while j < 4:
@@ -215,7 +243,9 @@ class User(object):
 						self.getUserInfoIG()
 					pass
 
-			# Assign and print features
+			"""
+			Assignation des critères et affichage des résultats
+			"""
 			if len(rates) > 0:
 				avg = mean(rates)
 				self.lastpost = time.time() - max(timestamps)
@@ -227,8 +257,8 @@ class User(object):
 				self.brandpresence = brpscs
 				self.brandtypes = self.getBrandTypes(brpscs)
 				self.commentscore = mean(comment_scores) * (1 + stdev(comment_scores))
-				self.colorfulness_std = stdev(colorfulness_list)
-				self.contrast_std = stdev(contrast_list)
+				self.colorfulness_std = stdev(colorfulness_list) if len(colorfulness_list) > 1 else 0
+				self.contrast_std = stdev(contrast_list) if len(contrast_list) > 1 else 0
 				self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
 				self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
 				self.colors_dispersion = self.__calcCentroid3d(self.colors)
@@ -330,7 +360,6 @@ class User(object):
 				brpscs.extend(brpsc)
 			"""
 
-
 			comments = self.sqlClient.getComments(str(post['id']))
 			for comment in comments:
 				if comment['id_user'] == post['user_id']:
@@ -343,24 +372,8 @@ class User(object):
 				commentscore = comment_scores[0]
 			else:
 				commentscore = 0
-			
-		# Assign and print features
-		"""
-		self.engagement : Le taux d'engagement sur le feed : n_likes + n_comments / n_followers.
-		self.lastpost : le timestamp POSIX du dernier post.
-		self.frequency : la fréquence de psot sur le feed.
-		self.followers : le nombre de followers.
-		self.followings : le nombre d'abonnements de l'utilisateur.
-		self.usermentions : le nombre de mentions utilisateur.
-		self.brandpresence : la liste des comptes, potentiellement des marques, avec qui l'influenceur fait des placements de produit.
-		self.brandtypes : le type de marques que l'utilisateur tague.
-		self.commentscore : le score de commentaires moyen que reçoit l'utilisateur.
-		self.colorfulness_std : l'intensité de couleurs sur le feed (écart-type).
-		self.contrast_std : le contraste sur les photos du feed (écart-type).
-		self.color_distorsion : la distorsion des clusters de couleur.
-		self.label : la catégorie de l'utilisateur.
-		"""
-		if len(rates) > 0:
+
+		if len(rates) > 1:
 			avg = mean(rates)
 			self.engagement = avg
 			self.lastpost = time.time() - max(timestamps)
@@ -371,8 +384,8 @@ class User(object):
 			self.brandpresence = brpscs
 			self.brandtypes = self.getBrandTypes(brpscs)
 			self.commentscore = commentscore
-			self.colorfulness_std = stdev(colorfulness_list)
-			self.contrast_std = stdev(contrast_list)
+			self.colorfulness_std = stdev(colorfulness_list) if len(colorfulness_list) > 1 else 0
+			self.contrast_std = stdev(contrast_list) if len(contrast_list) > 1 else 0
 			self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
 			
 			"""
@@ -389,7 +402,6 @@ class User(object):
 					self.n_clusters = self.n_clusters - 1
 					continue
 				break
-			self.colors_dispersion = self.__calcCentroid3d(self.colors)
 			self.label = int(user_sql['label'])
 		else:
 			print('This user has no posts !')

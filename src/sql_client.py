@@ -6,6 +6,7 @@ import time
 import math
 import pprint
 import requests
+import configparser
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -15,15 +16,28 @@ from utils import *
 
 pp = pprint.PrettyPrinter(indent=2)
 sys.path.append(os.path.dirname(__file__))
-
+min_timestamp_selection = 1529680225
+config_path = os.path.join(os.path.dirname(__file__), './config.ini')
 
 class SqlClient(object):
+	"""
+	SQL Client class.
+	"""
+
 	def __init__(self):
 		"""
 		__init__ function.
 		"""
 		super().__init__()
-		self.conn = psycopg2.connect("dbname='bulb' user='Bulb' host='91.121.211.203' password='ddHbhWIjriGN6i9weHUM'")
+		self.config = configparser.ConfigParser()
+		self.config.read(config_path)
+		print(self.config.sections())
+		self.conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s'" % (
+			self.config['pgAdmin']['dbname'],
+			self.config['pgAdmin']['user'],
+			self.config['pgAdmin']['host'],
+			self.config['pgAdmin']['password']
+		))
 		self.hashtag = ''
 
 	def openCursor(self):
@@ -345,13 +359,10 @@ class SqlClient(object):
 		self.cursor.execute('''
 			SELECT user_name FROM public.users as u
 			WHERE (
-				SELECT count(*) FROM public.images AS i
-				WHERE i.post_id in (
-					SELECT id FROM public.posts AS p
-					WHERE p.user_id = u.id
-				)
+				SELECT count(*) FROM public.posts AS p
+				WHERE p.timestamp_inserted_at > '%s'
 			) > 0 AND u.label = -1
-		''')
+		''' % str(min_timestamp_selection))
 		return ['http://www.instagram.com/%s' % name for name in self.cursor.fetchall()]
 	
 	def getUser(self, username):
@@ -392,15 +403,17 @@ class SqlClient(object):
 		''')
 		keys = [desc[0] for desc in self.cursor.description]
 		self.cursor.execute('''
-			SELECT * FROM posts as p
-			WHERE p.user_id = '%s'
+			SELECT * FROM posts AS p
+			WHERE p.user_id = '%s' AND (
+				SELECT 
+			)
 		''' % str(_id))
 		values = self.cursor.fetchall()
 		posts = list()
 		for post in values:
 			post = dict(zip(keys, post))
 			self.cursor.execute('''
-				SELECT image FROM images as i
+				SELECT image FROM images AS i
 				WHERE i.post_id = '%s'
 			''' % post['id'])
 			image = self.cursor.fetchone()
@@ -415,13 +428,10 @@ class SqlClient(object):
 		self.cursor.execute('''
 			SELECT * FROM public.users as u
 			WHERE (
-				SELECT count(*) FROM public.images AS i
-				WHERE i.post_id in (
-					SELECT id FROM public.posts AS p
-					WHERE p.user_id = u.id
-				)
+				SELECT count(*) FROM public.posts AS p
+				WHERE p.timestamp_inserted_at > '%s' 
 			) > 0 AND u.label > -1
-		''')
+		''' % str(min_timestamp_selection))
 		values = self.cursor.fetchall()
 		keys = [desc[0] for desc in self.cursor.description]
 		return [dict(zip(keys, value)) for value in values]
