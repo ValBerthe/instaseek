@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module user</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>user</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:c%3A%5Cusers%5Cvberthelot%5Cbulb%5Csrc%5Cuser.py">c:\users\vberthelot\bulb\src\user.py</a></font></td></tr></table>
+    <p></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="PIL.Image.html">PIL.Image</a><br>
+<a href="cv2.cv2.html">cv2.cv2</a><br>
+<a href="math.html">math</a><br>
+<a href="numpy.html">numpy</a><br>
+</td><td width="25%" valign=top><a href="os.html">os</a><br>
+<a href="pickle.html">pickle</a><br>
+<a href="matplotlib.pyplot.html">matplotlib.pyplot</a><br>
+<a href="pprint.html">pprint</a><br>
+</td><td width="25%" valign=top><a href="regex.html">regex</a><br>
+<a href="requests.html">requests</a><br>
+<a href="scipy.html">scipy</a><br>
+<a href="sys.html">sys</a><br>
+</td><td width="25%" valign=top><a href="time.html">time</a><br>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="builtins.html#object">builtins.object</a>
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="user.html#User">User</a>
+</font></dt></dl>
+</dd>
+</dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="User">class <strong>User</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Classe&nbsp;utilisateur.<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="User-__init__"><strong>__init__</strong></a>(self)</dt><dd><tt>__init__&nbsp;function.</tt></dd></dl>
+
+<dl><dt><a name="User-createCommentsModel"><strong>createCommentsModel</strong></a>(self)</dt><dd><tt>Crée&nbsp;le&nbsp;modèle&nbsp;de&nbsp;commentaires.</tt></dd></dl>
+
+<dl><dt><a name="User-getBrandPresence"><strong>getBrandPresence</strong></a>(self, post)</dt><dd><tt>Retourne&nbsp;les&nbsp;mentions&nbsp;utilisateur&nbsp;qui&nbsp;matchent&nbsp;avec&nbsp;les&nbsp;utilisateurs&nbsp;mentionnés&nbsp;dans&nbsp;la&nbsp;description&nbsp;du&nbsp;post.</tt></dd></dl>
+
+<dl><dt><a name="User-getBrandTypes"><strong>getBrandTypes</strong></a>(self, brands)</dt><dd><tt>Retourne&nbsp;les&nbsp;types&nbsp;de&nbsp;business&nbsp;que&nbsp;sont&nbsp;les&nbsp;'marques'&nbsp;mentionnées&nbsp;à&nbsp;la&nbsp;fois&nbsp;dans&nbsp;la&nbsp;description&nbsp;du&nbsp;post&nbsp;et&nbsp;en&nbsp;mention&nbsp;utilisateur.</tt></dd></dl>
+
+<dl><dt><a name="User-getCommentScore"><strong>getCommentScore</strong></a>(self, comment)</dt><dd><tt>Retourne&nbsp;le&nbsp;score&nbsp;de&nbsp;commentaire&nbsp;basé&nbsp;sur&nbsp;le&nbsp;modèle&nbsp;de&nbsp;commentaires.</tt></dd></dl>
+
+<dl><dt><a name="User-getContrast"><strong>getContrast</strong></a>(self, img)</dt><dd><tt>Retourne&nbsp;le&nbsp;contraste&nbsp;global&nbsp;de&nbsp;l'image.<br>
+Passe&nbsp;par&nbsp;un&nbsp;calcul&nbsp;d'entropie.</tt></dd></dl>
+
+<dl><dt><a name="User-getImageColorfulness"><strong>getImageColorfulness</strong></a>(self, image)</dt><dd><tt>Retoune&nbsp;l'intensité&nbsp;colorimétrique&nbsp;de&nbsp;l'image.</tt></dd></dl>
+
+<dl><dt><a name="User-getMostDominantColour"><strong>getMostDominantColour</strong></a>(self, image)</dt><dd><tt>Retourne&nbsp;la&nbsp;couleur&nbsp;dominante&nbsp;de&nbsp;l'image.</tt></dd></dl>
+
+<dl><dt><a name="User-getUserInfoIG"><strong>getUserInfoIG</strong></a>(self)</dt><dd><tt>Récupération&nbsp;des&nbsp;critères&nbsp;de&nbsp;l'utilisateur&nbsp;via.&nbsp;l'API&nbsp;d'Instagram.</tt></dd></dl>
+
+<dl><dt><a name="User-getUserInfoSQL"><strong>getUserInfoSQL</strong></a>(self)</dt><dd><tt>On&nbsp;récupère&nbsp;les&nbsp;posts&nbsp;de&nbsp;l'utilisateur&nbsp;à&nbsp;partir&nbsp;de&nbsp;la&nbsp;BDD,&nbsp;et&nbsp;on&nbsp;en&nbsp;extrait&nbsp;les&nbsp;features&nbsp;nécessaires&nbsp;pour&nbsp;l'apprentissage.<br>
+L'intérêt&nbsp;de&nbsp;cette&nbsp;méthode&nbsp;est&nbsp;qu'on&nbsp;peut&nbsp;solliciter&nbsp;la&nbsp;BDD&nbsp;très&nbsp;vite&nbsp;par&nbsp;rapport&nbsp;à&nbsp;l'API&nbsp;Instagram,&nbsp;ce&nbsp;qui&nbsp;nous&nbsp;permet&nbsp;de&nbsp;faire&nbsp;un<br>
+apprentissage&nbsp;'rapide'!</tt></dd></dl>
+
+<dl><dt><a name="User-getUserNames"><strong>getUserNames</strong></a>(self)</dt><dd><tt>Récupère&nbsp;les&nbsp;usrnames&nbsp;des&nbsp;utilisateurs&nbsp;annotés.</tt></dd></dl>
+
+<dl><dt><a name="User-processWordComment"><strong>processWordComment</strong></a>(self, word)</dt><dd><tt>Pré-processe&nbsp;le&nbsp;commentaire.</tt></dd></dl>
+
+<dl><dt><a name="User-testCommentScore"><strong>testCommentScore</strong></a>(self)</dt><dd><tt>Tooling&nbsp;permettant&nbsp;de&nbsp;tester&nbsp;les&nbsp;scores&nbsp;des&nbsp;commentaires&nbsp;utilisateur.</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>N_CLUSTERS</strong> = 3<br>
+<strong>comments_model_path</strong> = r'C:\Users\vberthelot\bulb\src\../models/comments.model'<br>
+<strong>pp</strong> = &lt;pprint.PrettyPrinter object&gt;<br>
+<strong>users_model_path</strong> = r'C:\Users\vberthelot\bulb\src\../models/users_sample.model'</td></tr></table>
+</body></html>
