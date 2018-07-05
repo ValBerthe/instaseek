@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 Copyright © 2018 Valentin Berthelot.
 
@@ -17,6 +18,8 @@ You should have received a copy of the GNU General Public License
 along with Instaseek. If not, see <https://www.gnu.org/licenses/>.
 """
 
+=======
+>>>>>>> Cleaning et complétion du requirements.txt
 ### System libs. ###
 import sys
 import os

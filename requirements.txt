@@ -7,5 +7,13 @@ opencv-python
 pandas
 pillow
 psycopg2
-scikit-learn
-tqdm
+imageio
+matplotlib
+networkx
+prettyprinter
+pillow
+imageio
+pandas
+sklearn
+opencv-python
+colormath

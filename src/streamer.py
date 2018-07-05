@@ -48,7 +48,6 @@ config_path = os.path.join(os.path.dirname(__file__), './config.ini')
 pp = pprint.PrettyPrinter(indent=2)
 TTW = 8
 
-
 class Streamer(object):
 	"""
 	Streamer class.
