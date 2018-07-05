@@ -6,4 +6,7 @@ src/bulb.sublime-project
 src/bulb.sublime-workspace
 Instagram API.ipynb
 bulbapp.tar
+res/bnw.PNG
+res/couleurs.PNG
+src/.pytest_cache/
 doc/
