@@ -1,0 +1,171 @@
+\hypertarget{classstreamer_1_1_streamer}{}\section{streamer.\+Streamer Class Reference}
+\label{classstreamer_1_1_streamer}\index{streamer.\+Streamer@{streamer.\+Streamer}}
+Inheritance diagram for streamer.\+Streamer\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classstreamer_1_1_streamer}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+def \mbox{\hyperlink{classstreamer_1_1_streamer_aae063a4ecba841acd0f6994af01d59c2}{\+\_\+\+\_\+init\+\_\+\+\_\+}} (self)
+\item 
+def \mbox{\hyperlink{classstreamer_1_1_streamer_a23ddd6eaeab682bd4267c13b0d6ff45a}{exit\+\_\+handler}} (self)
+\item 
+def \mbox{\hyperlink{classstreamer_1_1_streamer_a2b946c06d88923c6e742c7cfeb50331b}{display\+\_\+status}} (self)
+\item 
+def \mbox{\hyperlink{classstreamer_1_1_streamer_adf219de2f5539f544a36ce625d3c265f}{process\+\_\+post}} (self, post, top\+Post=False)
+\item 
+def \mbox{\hyperlink{classstreamer_1_1_streamer_a17ac10d55adba12d6f2ba2bc842d0176}{stream\+\_\+step}} (self, hashtag, get\+Top\+Posts, step\+Index)
+\item 
+def \mbox{\hyperlink{classstreamer_1_1_streamer_a4fa871cd42320cd2df771d9844d1a67c}{start\+\_\+stream}} (self)
+\end{DoxyCompactItemize}
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classstreamer_1_1_streamer_a8277cc626d919a135a8c7f2b1c8d48b7}{config}}
+\begin{DoxyCompactList}\small\item\em Login au compte Instagram du projet pour avoir accès à l\textquotesingle{}A\+PI. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classstreamer_1_1_streamer_a9e80f10c0b27f7f88d401ce838975640}{Instagram\+A\+PI}}
+\begin{DoxyCompactList}\small\item\em Connexion à l\textquotesingle{}A\+PI. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classstreamer_1_1_streamer_aa7493e40973e93c4d68e2859486132f7}\label{classstreamer_1_1_streamer_aa7493e40973e93c4d68e2859486132f7}} 
+{\bfseries hashtags\+\_\+sponsor\+\_\+related}
+\item 
+\mbox{\Hypertarget{classstreamer_1_1_streamer_ae284273790497dd16b742451763b8c1e}\label{classstreamer_1_1_streamer_ae284273790497dd16b742451763b8c1e}} 
+{\bfseries hashtags\+\_\+random}
+\item 
+\mbox{\hyperlink{classstreamer_1_1_streamer_ae7cbab4c93f54faa038805789506e167}{sql\+Client}}
+\begin{DoxyCompactList}\small\item\em Calcul du temps d\textquotesingle{}exécution de la fonction. \end{DoxyCompactList}\item 
+\mbox{\Hypertarget{classstreamer_1_1_streamer_a78e223c97e44e78fe8d165488e1a1891}\label{classstreamer_1_1_streamer_a78e223c97e44e78fe8d165488e1a1891}} 
+{\bfseries n\+\_\+comments}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\begin{DoxyVerb}Streamer class.
+\end{DoxyVerb}
+ 
+
+\subsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classstreamer_1_1_streamer_aae063a4ecba841acd0f6994af01d59c2}\label{classstreamer_1_1_streamer_aae063a4ecba841acd0f6994af01d59c2}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!\+\_\+\+\_\+init\+\_\+\+\_\+@{\+\_\+\+\_\+init\+\_\+\+\_\+}}
+\index{\+\_\+\+\_\+init\+\_\+\+\_\+@{\+\_\+\+\_\+init\+\_\+\+\_\+}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{\+\_\+\+\_\+init\+\_\+\+\_\+()}{\_\_init\_\_()}}
+{\footnotesize\ttfamily def streamer.\+Streamer.\+\_\+\+\_\+init\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}__init__ function.
+\end{DoxyVerb}
+ 
+
+\subsection{Member Function Documentation}
+\mbox{\Hypertarget{classstreamer_1_1_streamer_a2b946c06d88923c6e742c7cfeb50331b}\label{classstreamer_1_1_streamer_a2b946c06d88923c6e742c7cfeb50331b}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!display\+\_\+status@{display\+\_\+status}}
+\index{display\+\_\+status@{display\+\_\+status}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{display\+\_\+status()}{display\_status()}}
+{\footnotesize\ttfamily def streamer.\+Streamer.\+display\+\_\+status (\begin{DoxyParamCaption}\item[{}]{self }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Affiche le statut du stream.
+
+Args:
+    (none)
+
+Returns:
+    (none)
+\end{DoxyVerb}
+ \mbox{\Hypertarget{classstreamer_1_1_streamer_a23ddd6eaeab682bd4267c13b0d6ff45a}\label{classstreamer_1_1_streamer_a23ddd6eaeab682bd4267c13b0d6ff45a}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!exit\+\_\+handler@{exit\+\_\+handler}}
+\index{exit\+\_\+handler@{exit\+\_\+handler}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{exit\+\_\+handler()}{exit\_handler()}}
+{\footnotesize\ttfamily def streamer.\+Streamer.\+exit\+\_\+handler (\begin{DoxyParamCaption}\item[{}]{self }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Ferme la session Postgre quand le script exit.
+
+Args:
+    (none)
+
+Returns:
+    (none)
+\end{DoxyVerb}
+ \mbox{\Hypertarget{classstreamer_1_1_streamer_adf219de2f5539f544a36ce625d3c265f}\label{classstreamer_1_1_streamer_adf219de2f5539f544a36ce625d3c265f}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!process\+\_\+post@{process\+\_\+post}}
+\index{process\+\_\+post@{process\+\_\+post}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{process\+\_\+post()}{process\_post()}}
+{\footnotesize\ttfamily def streamer.\+Streamer.\+process\+\_\+post (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{post,  }\item[{}]{top\+Post = {\ttfamily False} }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Traite le post Instagram et l'insère en base.
+
+Args:
+    post (dict) : le post Instagram à traiter.
+    topPost (bool) : le post est-il récupéré en tant que TopPost sur Instagram ?
+
+Returns:
+    (none)
+\end{DoxyVerb}
+ \mbox{\Hypertarget{classstreamer_1_1_streamer_a4fa871cd42320cd2df771d9844d1a67c}\label{classstreamer_1_1_streamer_a4fa871cd42320cd2df771d9844d1a67c}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!start\+\_\+stream@{start\+\_\+stream}}
+\index{start\+\_\+stream@{start\+\_\+stream}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{start\+\_\+stream()}{start\_stream()}}
+{\footnotesize\ttfamily def streamer.\+Streamer.\+start\+\_\+stream (\begin{DoxyParamCaption}\item[{}]{self }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Démarre le stream.
+
+Args:
+    (none)
+
+Returns:
+    (none)
+\end{DoxyVerb}
+ \mbox{\Hypertarget{classstreamer_1_1_streamer_a17ac10d55adba12d6f2ba2bc842d0176}\label{classstreamer_1_1_streamer_a17ac10d55adba12d6f2ba2bc842d0176}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!stream\+\_\+step@{stream\+\_\+step}}
+\index{stream\+\_\+step@{stream\+\_\+step}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{stream\+\_\+step()}{stream\_step()}}
+{\footnotesize\ttfamily def streamer.\+Streamer.\+stream\+\_\+step (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{hashtag,  }\item[{}]{get\+Top\+Posts,  }\item[{}]{step\+Index }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Définit une étape du stream.
+
+Args:
+    hashtag (str) : le hashtag à streamer.
+    getTopPosts (bool) : prendre en compte les Top Posts uniquement ou non.
+    stepIndex (int) : le numéro de l'étape de stream.
+
+Returns:
+    (none)
+\end{DoxyVerb}
+ 
+
+\subsection{Member Data Documentation}
+\mbox{\Hypertarget{classstreamer_1_1_streamer_a8277cc626d919a135a8c7f2b1c8d48b7}\label{classstreamer_1_1_streamer_a8277cc626d919a135a8c7f2b1c8d48b7}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!config@{config}}
+\index{config@{config}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{config}{config}}
+{\footnotesize\ttfamily streamer.\+Streamer.\+config}
+
+
+
+Login au compte Instagram du projet pour avoir accès à l\textquotesingle{}A\+PI. 
+
+\paragraph*{}\mbox{\Hypertarget{classstreamer_1_1_streamer_a9e80f10c0b27f7f88d401ce838975640}\label{classstreamer_1_1_streamer_a9e80f10c0b27f7f88d401ce838975640}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!Instagram\+A\+PI@{Instagram\+A\+PI}}
+\index{Instagram\+A\+PI@{Instagram\+A\+PI}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{Instagram\+A\+PI}{InstagramAPI}}
+{\footnotesize\ttfamily streamer.\+Streamer.\+Instagram\+A\+PI}
+
+
+
+Connexion à l\textquotesingle{}A\+PI. 
+
+\paragraph*{}\mbox{\Hypertarget{classstreamer_1_1_streamer_ae7cbab4c93f54faa038805789506e167}\label{classstreamer_1_1_streamer_ae7cbab4c93f54faa038805789506e167}} 
+\index{streamer\+::\+Streamer@{streamer\+::\+Streamer}!sql\+Client@{sql\+Client}}
+\index{sql\+Client@{sql\+Client}!streamer\+::\+Streamer@{streamer\+::\+Streamer}}
+\subsubsection{\texorpdfstring{sql\+Client}{sqlClient}}
+{\footnotesize\ttfamily streamer.\+Streamer.\+sql\+Client}
+
+
+
+Calcul du temps d\textquotesingle{}exécution de la fonction. 
+
+On veut que le temps minimal d\textquotesingle{}exécution soit de 10s. \#\#\# Questionnement de l\textquotesingle{}A\+PI sur les champs du post. \#\#\# Insertion dans la B\+DD. \#\#\# Si le client S\+QL ferme, on le réinstancie pour le rouvrir. \#\#\# 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/streamer.\+py\end{DoxyCompactItemize}
