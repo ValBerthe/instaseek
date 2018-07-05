@@ -1,6 +1,5 @@
-import imageio
+### System libs. ###
 import json
-imageio.plugins.ffmpeg.download()
 import getpass
 import os
 import sys
@@ -10,13 +9,18 @@ import atexit
 import math
 import gc
 import pprint
-import psycopg2
+from random import randint
 
+### Installed libs. ###
+import psycopg2
+from tqdm import tqdm
+from InstagramAPI import InstagramAPI
+import imageio
+
+imageio.plugins.ffmpeg.download()
 sys.path.append(os.path.dirname(__file__))
 
-from InstagramAPI import InstagramAPI
-from random import randint
-from tqdm import tqdm
+### Custom libs. ###
 from utils import *
 from sql_client import *
 
@@ -24,7 +28,6 @@ from sql_client import *
 config_path = os.path.join(os.path.dirname(__file__), './config.ini')
 pp = pprint.PrettyPrinter(indent=2)
 TTW = 8
-
 
 class Streamer(object):
 	"""
