@@ -2,3 +2,12 @@ InstagramApi
 tqdm
 psycopg2
 imageio
+matplotlib
+networkx
+prettyprinter
+pillow
+imageio
+pandas
+sklearn
+opencv-python
+colormath

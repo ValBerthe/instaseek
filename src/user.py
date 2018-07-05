@@ -20,7 +20,6 @@ import scipy.cluster
 from cv2 import cv2
 import matplotlib.pyplot as plt
 import requests
-
 from InstagramAPI import InstagramAPI
 from tqdm import tqdm
 from PIL import Image
