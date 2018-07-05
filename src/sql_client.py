@@ -7,6 +7,7 @@ import math
 import pprint
 import requests
 import configparser
+import random
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -31,7 +32,6 @@ class SqlClient(object):
 		super().__init__()
 		self.config = configparser.ConfigParser()
 		self.config.read(config_path)
-		print(self.config.sections())
 		self.conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s'" % (
 			self.config['pgAdmin']['dbname'],
 			self.config['pgAdmin']['user'],
@@ -66,10 +66,10 @@ class SqlClient(object):
 		p__id, p__timestamp, p_media_type, p_text, p_small_img_url, p_tall_img_url, p_n_likes, p_n_comments, p_location, p_user_id, user_tags, sponsor_tags = get_post_fields(post)
 
 		self.cursor.execute('''
-			INSERT INTO posts (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin)
+			INSERT INTO posts (id_post, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin)
 			VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-			ON CONFLICT (id) DO UPDATE
-			SET (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+			ON CONFLICT (id_post) DO UPDATE
+			SET (id_post, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
 			''',
 			(
 				str(p__id),
@@ -106,10 +106,10 @@ class SqlClient(object):
 			id_user_tag = user_tag['user']['pk']
 			_id = str(p__id) + str(id_user_tag)
 			self.cursor.execute('''
-				INSERT INTO user_tags (id, id_post, id_user)
+				INSERT INTO user_tags (id_usertag, post_id, user_id)
 				VALUES (%s, %s, %s)
-				ON CONFLICT (id) DO UPDATE
-				SET (id, id_post, id_user) = (%s, %s, %s);
+				ON CONFLICT (id_usertag) DO UPDATE
+				SET (id_usertag, post_id, user_id) = (%s, %s, %s);
 				''',
 				(
 					str(_id),
@@ -151,10 +151,10 @@ class SqlClient(object):
 			p__id, p__timestamp, p_media_type, p_text, p_small_img_url, p_tall_img_url, p_n_likes, p_n_comments, p_location, p_user_id, user_tags, sponsor_tags = get_post_fields(post)
 
 			self.cursor.execute('''
-				INSERT INTO posts (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin)
+				INSERT INTO posts (id_post, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin)
 				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-				ON CONFLICT (id) DO UPDATE
-				SET (id, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+				ON CONFLICT (id_post) DO UPDATE
+				SET (id_post, timestamp, timestamp_inserted_at, media_type, text, small_img_url, tall_img_url, n_likes, n_comments, location, user_id, is_top_post, hashtag_origin) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
 				''',
 				(
 					str(p__id),
@@ -191,10 +191,10 @@ class SqlClient(object):
 				id_user_tag = user_tag['user']['pk']
 				_id = str(p__id) + str(id_user_tag)
 				self.cursor.execute('''
-					INSERT INTO user_tags (id, id_post, id_user)
+					INSERT INTO user_tags (id_usertag, post_id, user_id)
 					VALUES (%s, %s, %s)
-					ON CONFLICT (id) DO UPDATE
-					SET (id, id_post, id_user) = (%s, %s, %s);
+					ON CONFLICT (id_usertag) DO UPDATE
+					SET (id_usertag, post_id, user_id) = (%s, %s, %s);
 					''',
 					(
 						str(_id),
@@ -235,10 +235,10 @@ class SqlClient(object):
 			user
 		)
 		self.cursor.execute('''
-			INSERT INTO users (id, user_name, full_name, is_private, is_verified, profile_pic_url, category, n_media, n_follower, n_following, is_business, biography, n_usertags, email, phone, city_id, with_feed)
+			INSERT INTO users (id_user, user_name, full_name, is_private, is_verified, profile_pic_url, category, n_media, n_follower, n_following, is_business, biography, n_usertags, email, phone, city_id, with_feed)
 			VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-			ON CONFLICT (id) DO UPDATE
-			SET (id, user_name, full_name, is_private, is_verified, profile_pic_url, category, n_media, n_follower, n_following, is_business, biography, n_usertags, email, phone, city_id, with_feed) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+			ON CONFLICT (id_user) DO UPDATE
+			SET (id_user, user_name, full_name, is_private, is_verified, profile_pic_url, category, n_media, n_follower, n_following, is_business, biography, n_usertags, email, phone, city_id, with_feed) = (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 		''', (
 				str(u_id),
 				str(u_user_name),
@@ -286,10 +286,10 @@ class SqlClient(object):
 		for comment in comments:
 			_id, comment_user_id, comment_text = get_comment_fields(comment)
 			self.cursor.execute('''
-				INSERT INTO comments (id, id_post, id_user, comment)
+				INSERT INTO comments (id_comment, post_id, user_id, comment)
 				VALUES (%s, %s, %s, %s)
-				ON CONFLICT (id) DO UPDATE
-				SET (id, id_post, id_user, comment) = (%s, %s, %s, %s);
+				ON CONFLICT (id_comment) DO UPDATE
+				SET (id_comment, post_id, user_id, comment) = (%s, %s, %s, %s);
 				''',
 				(
 					str(_id),
@@ -305,27 +305,27 @@ class SqlClient(object):
 			)
 			self.conn.commit()
 
-	def insertLikers(self, id_post, likers):
+	def insertLikers(self, post_id, likers):
 		"""
 		Insère un like en BDD.
 		"""
 		for liker in likers:
-			id_user = get_liker_fields(liker)
-			_id = str(id_post) + str(id_user)
+			user_id = get_liker_fields(liker)
+			_id = str(post_id) + str(user_id)
 			self.cursor.execute('''
-				INSERT INTO likes (id, id_post, id_user)
+				INSERT INTO likes (id_like, post_id, user_id)
 				VALUES (%s, %s, %s)
-				ON CONFLICT (id) DO UPDATE
-				SET (id, id_post, id_user) = (%s, %s, %s);
+				ON CONFLICT (id_like) DO UPDATE
+				SET (id_like, post_id, user_id) = (%s, %s, %s);
 				''',
 				(
 					str(_id),
-					str(id_post), 
-					str(id_user),
+					str(post_id), 
+					str(user_id),
 					# for update
 					str(_id),
-					str(id_post), 
-					str(id_user)
+					str(post_id), 
+					str(user_id)
 				)
 			)
 		self.conn.commit()
@@ -340,42 +340,41 @@ class SqlClient(object):
 			WHERE u.user_name = '%s'
 		''' % (str(label), username))
 		self.conn.commit()
-
-	def getUsers(self, n = 0):
-		"""
-		Récupère n utilisateurs de la BDD.
-		"""
-		if n > 0:
-			self.cursor.execute('''
-				SELECT * FROM users
-				ORDER BY id DESC LIMIT %s
-			''' % str(n))
-			return self.cursor.fetchall()
 	
-	def getUsernameUrls(self):
+	def getUsernameUrls(self, labeled = True, randomized = True, sponsored_only = True):
 		"""
 		Récupère une liste d'adresses URL de profils en BDD.
 		"""
 		self.cursor.execute('''
-			SELECT user_name FROM public.users as u
-			WHERE (
-				SELECT count(*) FROM public.posts AS p
-				WHERE p.timestamp_inserted_at > '%s'
-			) > 0 AND u.label = -1
-		''' % str(min_timestamp_selection))
-		return ['http://www.instagram.com/%s' % name for name in self.cursor.fetchall()]
+			SELECT u.user_name FROM public.users AS u
+			INNER JOIN public.posts AS p
+			ON p.user_id = u.id_user
+			INNER JOIN public.images AS i
+			ON i.post_id = p.id_post
+			WHERE u.label %s -1 %s
+			GROUP BY u.user_name
+		''' % ('>' if labeled else '=', 'and p.hashtag_origin in (\'ad\', \'sponsored\')' if sponsored_only else ''))
+		array = ['http://www.instagram.com/%s' % name for name in self.cursor.fetchall()]
+		if randomized:
+			random.shuffle(array)
+		return array
 	
 	def getUser(self, username):
 		"""
 		Récupère un utilisateur en fonction de son nickname.
 		"""
 		self.cursor.execute('''
-			SELECT * FROM users as u
+			SELECT * FROM public.users AS u
+			INNER JOIN public.posts AS p
+			ON p.user_id = u.id_user
+			INNER JOIN public.images AS i
+			ON i.post_id = p.id_post
 			WHERE u.user_name = '%s'
 		''' % username)
-		values = self.cursor.fetchone()
+		values = self.cursor.fetchall()
 		keys = [desc[0] for desc in self.cursor.description]
-		return dict(zip(keys, values))
+		result = [dict(zip(keys, value)) for value in values]
+		return result
 
 	def getUserPosts(self, _id):
 		"""
@@ -398,43 +397,52 @@ class SqlClient(object):
 		}
 		"""
 		self.cursor.execute('''
-			SELECT * FROM posts
-			WHERE false
-		''')
-		keys = [desc[0] for desc in self.cursor.description]
-		self.cursor.execute('''
-			SELECT * FROM posts AS p
-			WHERE p.user_id = '%s' AND (
-				SELECT 
-			)
+			SELECT * FROM public.posts AS p
+			INNER JOIN public.images as i
+			on p.id_post = i.post_id
+			WHERE p.user_id = '%s'
 		''' % str(_id))
+		keys = [desc[0] for desc in self.cursor.description]
 		values = self.cursor.fetchall()
-		posts = list()
-		for post in values:
-			post = dict(zip(keys, post))
-			self.cursor.execute('''
-				SELECT image FROM images AS i
-				WHERE i.post_id = '%s'
-			''' % post['id'])
-			image = self.cursor.fetchone()
-			post['image'] = image
-			posts.append(post)
+		posts = [dict(zip(keys, post)) for post in values]
 		return posts
 
-	def getAllUsers(self):
+	def getUsers(self, limit, labeled = True):
 		"""
-		Retourne les utilisateurs annotables.
+		Retourne les utilisateurs annotés.
 		"""
 		self.cursor.execute('''
-			SELECT * FROM public.users as u
-			WHERE (
-				SELECT count(*) FROM public.posts AS p
-				WHERE p.timestamp_inserted_at > '%s' 
-			) > 0 AND u.label > -1
-		''' % str(min_timestamp_selection))
+			SELECT * FROM public.users AS u
+			INNER JOIN public.posts AS p
+			ON p.user_id = u.id_user
+			INNER JOIN public.images AS i
+			ON i.post_id = p.id_post
+			WHERE u.label %s -1
+			LIMIT %s
+		''' % ('>' if labeled else '=', str(limit)))
 		values = self.cursor.fetchall()
 		keys = [desc[0] for desc in self.cursor.description]
-		return [dict(zip(keys, value)) for value in values]
+		result = [dict(zip(keys, value)) for value in values]
+		return result
+	
+	def getUserNames(self, limit, labeled = True):
+		"""
+		Retourne les usernames des utilisateurs annotés.
+		"""
+		self.cursor.execute('''
+			SELECT u.user_name FROM public.users AS u
+			INNER JOIN public.posts AS p
+			ON p.user_id = u.id_user
+			INNER JOIN public.images AS i
+			ON i.post_id = p.id_post
+			WHERE u.label %s -1
+			GROUP BY u.user_name
+			%s
+		''' % ('>' if labeled else '=', 'LIMIT' + str(limit) if limit > 0 else ''))
+		values = self.cursor.fetchall()
+		keys = [desc[0] for desc in self.cursor.description]
+		result = [dict(zip(keys, value)) for value in values]
+		return result
 
 	def getComments(self, post_id):
 		"""
@@ -442,11 +450,27 @@ class SqlClient(object):
 		"""
 		self.cursor.execute('''
 			SELECT * from public.comments as c
-			WHERE c.id_post = '%s'
+			WHERE c.post_id = '%s'
 		''' % post_id)
 		values = self.cursor.fetchall()
 		keys = [desc[0] for desc in self.cursor.description]
 		return [dict(zip(keys, value)) for value in values]
+
+	def getAllLikes(self, n = 0):
+		"""
+		Retourne n likes en base de données.
+		"""
+		self.cursor.execute('''
+			SELECT l.user_id, p.user_id FROM public.likes as l
+			INNER JOIN public.posts as p
+			ON l.post_id = p.id_post
+			ORDER BY RANDOM()
+			LIMIT %s
+		''' % str(n))
+		values = self.cursor.fetchall()
+		#keys = [desc[0] for desc in self.cursor.description]
+		#return [dict(zip(keys, value)) for value in values]
+		return values
 
 	def getUserPostComments(self, user_id):
 		"""
@@ -455,7 +479,7 @@ class SqlClient(object):
 		self.cursor.execute('''
 			SELECT * FROM public.comments AS c
 			WHERE c.id_post IN (
-				SELECT (id) FROM public.posts AS p
+				SELECT (id_post) FROM public.posts AS p
 				WHERE p.user_id = '%s'
 			)
 		''' % user_id)
@@ -492,9 +516,9 @@ class SqlClient(object):
 		self.cursor.execute(
 			'''
 			SELECT avg(count) FROM (
-				SELECT count(id_post) 
+				SELECT count(post_id) 
 				FROM likes 
-				GROUP BY id_post
+				GROUP BY post_id
 			) AS counts
 			'''
 		)
@@ -503,9 +527,9 @@ class SqlClient(object):
 			'''
 			SELECT count_lk.likes_floor,  count(count_lk.likes_floor)
 			FROM (
-				SELECT  FLOOR((count(lk.id_post) / 10) *10) as likes_floor
+				SELECT  FLOOR((count(lk.post_id) / 10) *10) as likes_floor
 				FROM likes as lk
-				GROUP BY lk.id_post
+				GROUP BY lk.post_id
 			) as count_lk
 			GROUP BY count_lk.likes_floor
 			ORDER BY count_lk.likes_floor;
@@ -523,9 +547,9 @@ class SqlClient(object):
 		"""
 		self.cursor.execute('''
 			SELECT avg(count) FROM (
-				SELECT count(id_post) 
+				SELECT count(post_id) 
 				FROM comments 
-				GROUP BY id_post
+				GROUP BY post_id
 			) AS counts
 			'''
 		)
