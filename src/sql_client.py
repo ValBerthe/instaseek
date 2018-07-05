@@ -15,7 +15,7 @@ from PIL import Image
 from io import BytesIO
 from utils import *
 
-pp = pprint.PrettyPrinter(indent=2)
+pp = pprint.PrettyPrinter(indent = 2)
 sys.path.append(os.path.dirname(__file__))
 min_timestamp_selection = 1529680225
 config_path = os.path.join(os.path.dirname(__file__), './config.ini')
