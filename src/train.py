@@ -34,10 +34,12 @@ class Trainer(object):
 	"""
 	Classe d'entraînement du modèle de détection des influenceurs.
 	"""
-	def __init__(self, split_ratio = 0.75):
+
+	def __init__(self, split_ratio = 0.8):
 		"""
 		__init__ function. On définit aussi les features que l'on va utiliser pour l'étude.
 		"""
+
 		super().__init__()
 		self.key_features = [
 			'commentscore', 
