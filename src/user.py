@@ -516,20 +516,17 @@ class User(object):
 			avg = mean(rates)
 			self.engagement = avg
 			self.lastpost = time.time() - max(timestamps)
-			self.frequency = self.__calculateFrequency(
-				len(posts), min(timestamps))
-			self.followings = int(post['n_following'])
-			self.followers = int(post['n_follower'])
-			self.usermentions = int(post['n_usertags'])
+			self.frequency = self.__calculateFrequency(len(posts), min(timestamps))
+			self.followings = int(posts[0]['n_following'])
+			self.followers = int(posts[0]['n_follower'])
+			self.usermentions = int(posts[0]['n_usertags'])
+			self.nmedias = int(posts[0]['n_media'])
 			self.brandpresence = brpscs
 			self.brandtypes = self.getBrandTypes(brpscs)
 			self.commentscore = commentscore
-			self.colorfulness_std = stdev(colorfulness_list) if len(
-				colorfulness_list) > 1 else 0
-			self.contrast_std = stdev(contrast_list) if len(
-				contrast_list) > 1 else 0
-			self.colors = [[color.lab_l, color.lab_a, color.lab_b]
-						   for color in dominant_colors_list]
+			self.colorfulness_std = stdev(colorfulness_list) if len(colorfulness_list) > 1 else 0
+			self.contrast_std = stdev(contrast_list) if len(contrast_list) > 1 else 0
+			self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
 
 			### Ici, on cherche à avoir la distorsion des k-means des couleurs du feed. 						###
 			### Parfois, on peut avoir que une ou deux couleurs outputées du k-mean.                            ###
