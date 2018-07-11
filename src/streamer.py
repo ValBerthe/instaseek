@@ -179,7 +179,7 @@ class Streamer(object):
 		feed = self.InstagramAPI.LastJson
 		self.sqlClient.openCursor()
 
-		### Est-ce qu'on récupère les Top Posts Instagram ? 
+		### Est-ce qu'on récupère les Top Posts Instagram ? ###
 		if getTopPosts:
 			topPostIter = tqdm(feed['ranked_items'])
 			topPostIter.set_description('Streaming #%s\'s top posts...' % hashtag)
