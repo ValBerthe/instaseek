@@ -14,6 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.utils import shuffle
+from sklearn.model_selection import cross_val_score
 from tqdm import tqdm
 
 sys.path.append(os.path.dirname(__file__))
@@ -46,6 +47,7 @@ class Trainer(object):
 			'engagement',
 			'followers',
 			'followings',
+			'nmedias',
 			'frequency',
 			'lastpost',
 			'usermentions',
@@ -56,6 +58,7 @@ class Trainer(object):
 		self.features_array = list()
 		self.labels = list()
 		self.split_ratio = split_ratio
+		self.users_array = list()
 
 	def buildUsersModel(self):
 		"""
@@ -75,18 +78,16 @@ class Trainer(object):
 		### Si le modèle d'utilisateurs existe déjà, on l'ouvre. ###
 		if os.path.isfile(users_model_path):
 			with open(users_model_path, 'rb') as f:
-				users_array = pickle.load(f)
-		else:
-			users_array = []
+				self.users_array = pickle.load(f)
 		
 		### Index du split. ###
-		self.n_split = math.floor(self.split_ratio * len(users_array)) + 1
+		self.n_split = math.floor(self.split_ratio * len(self.users_array)) + 1
 
 		### On parcourt le tableau des utilisateurs pour leur assigner les features. ###
 		for user in tqdm(users):
 
 			### Si l'utilisateur se trouve déjà dans le teableau, on n'a pas à réeffectuer le traitement. ###
-			if user['user_name'] in [_user['username'] for _user in users_array]:
+			if user['user_name'] in [_user['username'] for _user in self.users_array]:
 				continue
 			self.user_model.username = user['user_name']
 
@@ -102,20 +103,21 @@ class Trainer(object):
 				'engagement': self.user_model.engagement,
 				'followings': self.user_model.followings,
 				'followers': self.user_model.followers,
+				'nmedias': self.user_model.nmedias,
 				'usermentions': self.user_model.usermentions,
 				'brandpresence': self.user_model.brandpresence,
 				'brandtypes': self.user_model.brandtypes,
 				'commentscore': self.user_model.commentscore,
 				'label': self.user_model.label
 			}
-			users_array.append(item)
+			self.users_array.append(item)
 
 			### Sauvegarde du modèle d'utilisateurs. ###
 			with open(users_model_path, 'wb') as f:
-				pickle.dump(users_array, f)
+				pickle.dump(self.users_array, f)
 
 		### Assignation de la liste des features en tant que liste, et les labels correspondants. ###
-		for user in users_array:
+		for user in self.users_array:
 			features = list()
 			for key in self.key_features:
 				features.append(user[key])
@@ -123,11 +125,11 @@ class Trainer(object):
 			self.labels.append(user['label'])
 		
 		### On mélange les résultats pour ne pas avoir toujours les mêmes répartitions coup sur coup. ###
-		self.features_array, self.labels = shuffle(self.features_array, self.labels, random_state = 0)
+		self.features_array, self.labels, self.users_array = shuffle(self.features_array, self.labels, self.users_array, random_state = 0)
 
 	def train(self):
 		"""
-		Entraînement du modèle.
+		Entraînement du modèle de classification.
 		
 			Args:
 				(none)
@@ -146,8 +148,8 @@ class Trainer(object):
 		importance = clf.feature_importances_
 
 		### Score de la classification. ###
-		score = clf.score(self.features_array[self.n_split:], self.labels[self.n_split:])
-		print(score)
+		scores = cross_val_score(clf, self.features_array, self.labels, cv = 5)
+		print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
 
 		### On calcule une prédiction pour la matrice de confusion et le rapport de classification. ###
 		pred = clf.predict(self.features_array[self.n_split:])
@@ -162,9 +164,40 @@ class Trainer(object):
 
 		print(classification_report(self.labels[self.n_split:], pred))
 
+		self.displayFPFN(pred)
+
 		### Sauvegarde le classifieur en tant que modèle. ###
 		with open(model_path, 'wb') as __f:
 			pickle.dump(clf, __f)
+		
+	def displayFPFN(self, preds):
+		"""
+		Affiche les faux positifs et les faux négatifs pour une étude plus poussée des erreurs.
+
+				Args:
+					preds (int[]): : une liste des valeurs prédites.
+
+				Returns:
+					(none)
+		"""
+
+		### On instancie les listes des faux positifs et des faux négatifs. ###
+		fp = list()
+		fn = list()
+
+		### On parcourt le tableau des prédictions pour obtenir les faux positifs et les faux négatifs. ###
+		for index, pred in enumerate(preds):
+
+			### Faux positifs. ###
+			if pred == 1 and self.labels[self.n_split:][index] == 0:
+				fp.append(self.users_array[self.n_split:][index]['username'])
+			if pred == 0 and self.labels[self.n_split:][index] == 1:
+				fn.append(self.users_array[self.n_split:][index]['username'])
+		
+		print('\nFaux positifs:\n\n')
+		pp.pprint(fp)
+		print('\n\nFaux négatifs:\n\n')
+		pp.pprint(fn)
 
 	def classify_user(self):
 		"""
