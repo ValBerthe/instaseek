@@ -43,7 +43,6 @@ config_path = os.path.join(os.path.dirname(__file__), './config.ini')
 
 N_CLUSTERS = 3
 
-
 class User(object):
 	"""
 	Classe utilisateur.
@@ -754,7 +753,7 @@ class User(object):
 		### De ce fait, si les mots-clés du commentaire sont 'importants' = si leur score est élevé, alors l'écart-type sera important. ###
 		j = 1 / (1 + math.exp(- self.K_ * (stdev(word_scores) - self.B))
 				 ) if len(word_scores) > 1 else 0
-		return k * j * comment_score
+		return k * j * comment_score * len(word_scores)
 
 	def createCommentsModel(self):
 		"""
