@@ -278,7 +278,8 @@ class Trainer(object):
 
 				### Prédiction. ###
 				pred = clf.predict(vector)
-				print('%s' % ('Yes' if pred == 1 else 'No'))
+				y_score = clf.predict_proba(vector)
+				print('%s, score: %s' % ('Yes' if pred == 1 else 'No', y_score))
 
 if __name__ == "__main__":
 	trainer = Trainer()
