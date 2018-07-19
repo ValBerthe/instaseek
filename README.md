@@ -11,7 +11,7 @@ This project aims to detect genuine and organic influencers on Instagram. The mo
 
 - Simple metrics such as followers, following, media count, mean engagement rate, post frequency, etc.
 - Comment quality score: is the audience engaged ?
-- Metrics over the feed images' quality : unity of contrast and colofulness, redundancy of colors, etc.
+- Metrics over the feed images' quality : unity of contrast and colorfulness, redundancy of colors, etc.
 
 ## Script files
 
