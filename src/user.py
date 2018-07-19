@@ -1,3 +1,22 @@
+"""
+Copyright © 2018 Valentin Berthelot.
+
+This file is part of Instaseek.
+
+Instaseek is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Instaseek is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Instaseek. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 ### System libs. ###
 import pickle
 import pprint
@@ -42,7 +61,6 @@ users_model_path = os.path.join(os.path.dirname(
 config_path = os.path.join(os.path.dirname(__file__), './config.ini')
 
 N_CLUSTERS = 3
-
 
 class User(object):
 	"""
@@ -360,6 +378,7 @@ class User(object):
 				self.followings = int(user_server['following_count'])
 				self.followers = int(user_server['follower_count'])
 				self.usermentions = int(user_server['usertags_count'])
+				self.nmedias = int(user_server['media_count'])
 				self.brandpresence = brpscs
 				self.brandtypes = self.getBrandTypes(brpscs)
 				self.commentscore = mean(
@@ -754,7 +773,7 @@ class User(object):
 		### De ce fait, si les mots-clés du commentaire sont 'importants' = si leur score est élevé, alors l'écart-type sera important. ###
 		j = 1 / (1 + math.exp(- self.K_ * (stdev(word_scores) - self.B))
 				 ) if len(word_scores) > 1 else 0
-		return k * j * comment_score
+		return k * j * comment_score * len(word_scores)
 
 	def createCommentsModel(self):
 		"""
