@@ -24,3 +24,10 @@ This project aims to detect genuine and organic influencers on Instagram. The mo
 - `user.py` processes user infomation and extracts feature for machine learning.
 - `utils.py` gathers all utility functions.
 
+## Contact
+
+Valentin Berthelot
+
+valentin.berthelot@imt-atlantique.fr
+valentin.berthelot5@gmail.com
+
