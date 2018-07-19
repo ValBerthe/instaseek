@@ -1,3 +1,22 @@
+"""
+Copyright © 2018 Valentin Berthelot.
+
+This file is part of Instaseek.
+
+Instaseek is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Instaseek is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Instaseek. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 ### System libs. ###
 import sys
 import os
@@ -12,9 +31,10 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import confusion_matrix, classification_report, roc_curve, auc
 from sklearn.utils import shuffle
 from sklearn.model_selection import cross_val_score
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 sys.path.append(os.path.dirname(__file__))
@@ -48,7 +68,7 @@ class Trainer(object):
 			'followers',
 			'followings',
 			'nmedias',
-			'frequency',
+			#'frequency',
 			'lastpost',
 			'usermentions',
 			'colorfulness_std',
@@ -164,7 +184,30 @@ class Trainer(object):
 
 		print(classification_report(self.labels[self.n_split:], pred))
 
-		self.displayFPFN(pred)
+		### Affichage des faux positifs et faux négatifs pour observer quels influenceurs sont mal détectés. ###
+		#self.displayFPFN(pred)
+
+		### Génération des probabilités (et non du vote à majorité) du Random Forest
+		y_score = clf.predict_proba(self.features_array[self.n_split:])
+		pred2 = [predclass[1] for predclass in y_score]
+
+		### Construction de la courbe ROC. ###
+		fpr, tpr, _ = roc_curve(self.labels[self.n_split:], pred2)
+		### Aire sous la courbe. ###
+		roc_auc = auc(fpr, tpr)
+
+		### Affichage de la courbe ROC. ###
+		plt.figure()
+		lw = 2
+		plt.plot(fpr, tpr, color='darkorange', lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
+		plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+		plt.xlim([0.0, 1.0])
+		plt.ylim([0.0, 1.05])
+		plt.xlabel('False Positive Rate')
+		plt.ylabel('True Positive Rate')
+		plt.title('Receiver operating characteristic example')
+		plt.legend(loc="lower right")
+		plt.show()
 
 		### Sauvegarde le classifieur en tant que modèle. ###
 		with open(model_path, 'wb') as __f:
@@ -225,11 +268,12 @@ class Trainer(object):
 					user.engagement,
 					user.followers,
 					user.followings,
-					user.frequency,
+					user.nmedias,
 					user.lastpost,
 					user.usermentions,
 					user.colorfulness_std,
-					user.color_distorsion
+					user.color_distorsion,
+					user.contrast_std
 				]]
 
 				### Prédiction. ###
