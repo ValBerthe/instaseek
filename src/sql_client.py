@@ -26,6 +26,7 @@ import requests
 import configparser
 import random
 from io import BytesIO
+from collections import Counter
 
 ### Installed libs. ###
 import psycopg2
@@ -74,6 +75,306 @@ class SqlClient(object):
 		Ferme le curseur SQL du client.
 		"""
 		self.cursor.close()
+
+	def createDatabase(self):
+		"""
+		Créée la base de données vide.
+		"""
+		self.cursor.execute('''
+				--
+				-- PostgreSQL database dump
+				--
+
+				-- Dumped from database version 9.6.9
+				-- Dumped by pg_dump version 9.6.9
+
+				-- Started on 2018-07-17 14:37:30 CEST
+
+				SET statement_timeout = 0;
+				SET lock_timeout = 0;
+				SET idle_in_transaction_session_timeout = 0;
+				SET client_encoding = 'UTF8';
+				SET standard_conforming_strings = on;
+				SELECT pg_catalog.set_config('search_path', '', false);
+				SET check_function_bodies = false;
+				SET client_min_messages = warning;
+				SET row_security = off;
+
+				--
+				-- TOC entry 2177 (class 1262 OID 18214)
+				-- Name: bulb; Type: DATABASE; Schema: -; Owner: Bulb
+				--
+
+				--
+				-- TOC entry 1 (class 3079 OID 12395)
+				-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner:
+				--
+
+
+				--
+				-- TOC entry 2179 (class 0 OID 0)
+				-- Dependencies: 1
+				-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner:
+				--
+
+
+
+				SET default_tablespace = '';
+
+				SET default_with_oids = false;
+
+				--
+				-- TOC entry 189 (class 1259 OID 18259)
+				-- Name: comments; Type: TABLE; Schema: public; Owner: Bulb
+				--
+
+				CREATE TABLE comments (
+					post_id text NOT NULL,
+					user_id text NOT NULL,
+					comment text NOT NULL,
+					id_comment text NOT NULL
+				);
+
+
+
+				--
+				-- TOC entry 190 (class 1259 OID 29565)
+				-- Name: images; Type: TABLE; Schema: public; Owner: Bulb
+				--
+
+				CREATE TABLE images (
+					url text NOT NULL,
+					post_id text NOT NULL,
+					image blob NOT NULL
+				);
+
+
+
+				--
+				-- TOC entry 187 (class 1259 OID 18243)
+				-- Name: likes; Type: TABLE; Schema: public; Owner: Bulb
+				--
+
+				CREATE TABLE likes (
+					post_id text NOT NULL,
+					user_id text NOT NULL,
+					id_like text NOT NULL
+				);
+
+
+
+				--
+				-- TOC entry 185 (class 1259 OID 18219)
+				-- Name: posts; Type: TABLE; Schema: public; Owner: Bulb
+				--
+
+				CREATE TABLE posts (
+					id_post text NOT NULL,
+					timestamp integer NOT NULL,
+					media_type smallint NOT NULL,
+					small_img_url text,
+					tall_img_url text,
+					n_likes integer NOT NULL,
+					n_comments integer,
+					location bigint,
+					user_id text NOT NULL,
+					text text,
+					is_top_post boolean,
+					hashtag_origin text,
+					timestamp_inserted_at integer
+				);
+
+
+
+
+				--
+				-- TOC entry 188 (class 1259 OID 18251)
+				-- Name: user_tags; Type: TABLE; Schema: public; Owner: Bulb
+				--
+
+				CREATE TABLE user_tags (
+					post_id text NOT NULL,
+					user_id text NOT NULL,
+					id_usertag text NOT NULL
+				);
+
+
+
+				--
+				-- TOC entry 186 (class 1259 OID 18227)
+				-- Name: users; Type: TABLE; Schema: public; Owner: Bulb
+				--
+
+				CREATE TABLE users (
+					id_user text NOT NULL,
+					user_name text NOT NULL,
+					full_name text NOT NULL,
+					is_private boolean NOT NULL,
+					is_verified boolean NOT NULL,
+					profile_pic_url text,
+					n_media integer NOT NULL,
+					n_follower integer NOT NULL,
+					n_following integer NOT NULL,
+					is_business boolean NOT NULL,
+					biography text NOT NULL,
+					n_usertags integer NOT NULL,
+					email text,
+					phone text,
+					city_id text,
+					category text,
+					with_feed boolean DEFAULT false,
+					label smallint DEFAULT '-1'
+				);
+
+
+
+
+				--
+				-- TOC entry 2045 (class 2606 OID 19162)
+				-- Name: comments comments_pkey; Type: CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY comments
+					ADD CONSTRAINT comments_pkey PRIMARY KEY (id_comment);
+
+
+				--
+				-- TOC entry 2048 (class 2606 OID 29572)
+				-- Name: images images_pkey; Type: CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY images
+					ADD CONSTRAINT images_pkey PRIMARY KEY (url);
+
+
+				--
+				-- TOC entry 2040 (class 2606 OID 19165)
+				-- Name: likes likes_pkey; Type: CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY likes
+					ADD CONSTRAINT likes_pkey PRIMARY KEY (id_like);
+
+
+				--
+				-- TOC entry 2035 (class 2606 OID 18226)
+				-- Name: posts posts_pkey; Type: CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY posts
+					ADD CONSTRAINT posts_pkey PRIMARY KEY (id_post);
+
+
+				--
+				-- TOC entry 2037 (class 2606 OID 18234)
+				-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY users
+					ADD CONSTRAINT users_pkey PRIMARY KEY (id_user);
+
+
+				--
+				-- TOC entry 2043 (class 2606 OID 19229)
+				-- Name: user_tags usertags_pkey; Type: CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY user_tags
+					ADD CONSTRAINT usertags_pkey PRIMARY KEY (id_usertag);
+
+
+				--
+				-- TOC entry 2033 (class 1259 OID 18289)
+				-- Name: fki_author_user; Type: INDEX; Schema: public; Owner: Bulb
+				--
+
+				CREATE INDEX fki_author_user ON public.posts USING btree (user_id);
+
+
+				--
+				-- TOC entry 2046 (class 1259 OID 18272)
+				-- Name: fki_id_post; Type: INDEX; Schema: public; Owner: Bulb
+				--
+
+				CREATE INDEX fki_id_post ON public.comments USING btree (post_id);
+
+
+				--
+				-- TOC entry 2038 (class 1259 OID 18283)
+				-- Name: fki_id_post_likes; Type: INDEX; Schema: public; Owner: Bulb
+				--
+
+				CREATE INDEX fki_id_post_likes ON public.likes USING btree (post_id);
+
+
+				--
+				-- TOC entry 2041 (class 1259 OID 18295)
+				-- Name: fki_id_post_user_tags; Type: INDEX; Schema: public; Owner: Bulb
+				--
+
+				CREATE INDEX fki_id_post_user_tags ON public.user_tags USING btree (post_id);
+
+
+				--
+				-- TOC entry 2049 (class 2606 OID 18284)
+				-- Name: posts author_user; Type: FK CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY posts
+					ADD CONSTRAINT author_user FOREIGN KEY (user_id) REFERENCES users(id_user);
+
+
+				--
+				-- TOC entry 2050 (class 2606 OID 18273)
+				-- Name: likes id_post; Type: FK CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY likes
+					ADD CONSTRAINT id_post FOREIGN KEY (post_id) REFERENCES posts(id_post);
+
+
+				--
+				-- TOC entry 2053 (class 2606 OID 18267)
+				-- Name: comments id_post_comments; Type: FK CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY comments
+					ADD CONSTRAINT id_post_comments FOREIGN KEY (post_id) REFERENCES posts(id_post);
+
+
+				--
+				-- TOC entry 2051 (class 2606 OID 18278)
+				-- Name: likes id_post_likes; Type: FK CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY likes
+					ADD CONSTRAINT id_post_likes FOREIGN KEY (post_id) REFERENCES posts(id_post);
+
+
+				--
+				-- TOC entry 2052 (class 2606 OID 18290)
+				-- Name: user_tags id_post_user_tags; Type: FK CONSTRAINT; Schema: public; Owner: Bulb
+				--
+				ALTER TABLE ONLY user_tags
+					ADD CONSTRAINT id_post_user_tags FOREIGN KEY (post_id) REFERENCES posts(id_post);
+
+
+				--
+				-- TOC entry 2054 (class 2606 OID 29573)
+				-- Name: images image_fk; Type: FK CONSTRAINT; Schema: public; Owner: Bulb
+				--
+
+				ALTER TABLE ONLY images
+					ADD CONSTRAINT image_fk FOREIGN KEY (post_id) REFERENCES posts(id_post);
+
+
+				-- Completed on 2018-07-17 14:37:30 CEST
+
+				--
+				-- PostgreSQL database dump complete
+				--
+		''')
+		self.conn.commit()
 
 	def setHashtag(self, hashtag):
 		"""
@@ -364,6 +665,34 @@ class SqlClient(object):
 		''' % (str(label), username))
 		self.conn.commit()
 	
+	def setTest(self, username, isTest):
+		"""
+		Définit si l'utilisateur fait partie du set de test ou du training set.
+		"""
+		self.cursor.execute('''
+			UPDATE users as u
+			SET test_set = '%s'
+			WHERE u.user_name = '%s'
+		''' % ('true' if isTest else 'false', username))
+		self.conn.commit()
+	
+	def getTestRatio(self):
+		"""
+		Retourne le ratio de la taille du jeu de données avec 
+		"""
+		self.cursor.execute('''
+			SELECT test_set FROM users AS u
+			WHERE u.label > -1
+		''')
+		values = self.cursor.fetchall()
+		keys = [desc[0] for desc in self.cursor.description]
+		result = [dict(zip(keys, value)) for value in values]
+		bools = [row['test_set'] for row in result]
+		cntr = Counter(bools)
+		ratio = cntr[True] / (cntr[True] + cntr[False])
+		print(ratio)
+		return ratio
+
 	def getUsernameUrls(self, labeled = True, randomized = True, sponsored_only = True):
 		"""
 		Récupère une liste d'adresses URL de profils en BDD.
@@ -382,26 +711,9 @@ class SqlClient(object):
 			random.shuffle(array)
 		return array
 	
-	def getUser(self, username):
+	def getUserPosts(self, username):
 		"""
-		Récupère un utilisateur en fonction de son nickname.
-		"""
-		self.cursor.execute('''
-			SELECT * FROM public.users AS u
-			INNER JOIN public.posts AS p
-			ON p.user_id = u.id_user
-			INNER JOIN public.images AS i
-			ON i.post_id = p.id_post
-			WHERE u.user_name = '%s'
-		''' % username)
-		values = self.cursor.fetchall()
-		keys = [desc[0] for desc in self.cursor.description]
-		result = [dict(zip(keys, value)) for value in values]
-		return result
-
-	def getUserPosts(self, _id):
-		"""
-		Récupère tous les posts des utilisateurs.
+		Récupère un utilisateur et ses posts en fonction de son nickname.
 		Retourne : {
 			id: ...
 			timestamps: ...
@@ -420,15 +732,29 @@ class SqlClient(object):
 		}
 		"""
 		self.cursor.execute('''
-			SELECT * FROM public.posts AS p
-			INNER JOIN public.images as i
-			on p.id_post = i.post_id
-			WHERE p.user_id = '%s'
-		''' % str(_id))
-		keys = [desc[0] for desc in self.cursor.description]
+			SELECT * FROM public.users AS u
+			INNER JOIN public.posts AS p
+			ON p.user_id = u.id_user
+			INNER JOIN public.images AS i
+			ON i.post_id = p.id_post
+			WHERE u.user_name = '%s'
+		''' % username)
 		values = self.cursor.fetchall()
-		posts = [dict(zip(keys, post)) for post in values]
-		return posts
+		keys = [desc[0] for desc in self.cursor.description]
+		result = [dict(zip(keys, value)) for value in values]
+		return result
+
+	def getUser(self, username):
+		"""
+		Récupère les informations d'un utilisateur.
+		"""
+		self.cursor.execute('''
+			SELECT * FROM public.users AS u
+			WHERE u.user_name = '%s'
+		''' % str(username))
+		keys = [desc[0] for desc in self.cursor.description]
+		values = self.cursor.fetchone()
+		return dict(zip(keys, values))
 
 	def getUsers(self, limit, labeled = True):
 		"""
@@ -600,10 +926,24 @@ class SqlClient(object):
 		Récupère tous les commentaires de la BDD.
 		"""
 		self.cursor.execute('''
-			SELECT comment from comments
+			SELECT comment FROM comments
 		''')
 		return self.cursor.fetchall()
 	
+	def getAllBiographies(self):
+		"""
+		Récupère toutes les biographies de la BDD.
+		"""
+		self.cursor.execute('''
+			SELECT biography, label FROM users AS u
+			WHERE u.label > -1 AND u.test_set = false
+		''')
+		values = self.cursor.fetchall()
+		keys = [desc[0] for desc in self.cursor.description]
+		result = [dict(zip(keys, value)) for value in values]
+		print(result)
+		return result
+
 	def close(self):
 		"""
 		Ferme la connexion.

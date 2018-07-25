@@ -30,9 +30,7 @@ sys.path.append(os.path.dirname(__file__))
 ### Custom libs. ###
 from sql_client import SqlClient
 
-### Si le programme est lancé ad hoc. ###
-if __name__ == "__main__":
-
+def annotate():
 	sys.path.append(os.path.dirname(__file__))
 	chrome_path = 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s'
 	insta_path = 'http://www.instagram.com/'
@@ -46,9 +44,8 @@ if __name__ == "__main__":
 	print('Fetched %s users.' % str(len(users)))
 	sqlClient.closeCursor()
 
-	labels = list()
+	for user in users:
 
-	for index, user in enumerate(users):
 		### Ouvre un nouvel onglet, sur la page Instagram de l'utilisateur à annoter. ###
 		webbrowser.get(chrome_path).open(user)
 		label = -1
@@ -56,8 +53,19 @@ if __name__ == "__main__":
 		### On recommence tant que l'utilisateur n'a pas été annoté par 0 ou par 1. ###
 		while label not in ['0', '1']:
 			label = input('Label pour cette page ? %s : ' % user)
-		sqlClient.openCursor()
 
 		### Set le label en base. ###
-		sqlClient.setLabel(user.split(insta_path)[1], label)
+		sqlClient.openCursor()
+		username = user.split(insta_path)[1]
+		sqlClient.setLabel(username, label)
 		sqlClient.closeCursor()
+
+		sqlClient.openCursor()
+		if sqlClient.getTestRatio > 0.25:
+			sqlClient.setTest(username, True)
+		sqlClient.closeCursor()
+
+### Si le programme est lancé ad hoc. ###
+if __name__ == "__main__":
+	annotate()
+	

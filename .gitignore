@@ -1,4 +1,7 @@
 src/__pycache__/
+src/.pytest_cache/
+res/bnw.PNG
+res/couleurs.PNG
 .ipynb_checkpoints/
 src/config.ini
 src/streamer.sublime-workspace
