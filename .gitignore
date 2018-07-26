@@ -1,4 +1,7 @@
 src/__pycache__/
+src/.pytest_cache/
+res/bnw.PNG
+res/couleurs.PNG
 .ipynb_checkpoints/
 src/config.ini
 src/streamer.sublime-workspace
@@ -6,4 +9,7 @@ src/bulb.sublime-project
 src/bulb.sublime-workspace
 Instagram API.ipynb
 bulbapp.tar
+res/bnw.PNG
+res/couleurs.PNG
+src/.pytest_cache/
 doc/

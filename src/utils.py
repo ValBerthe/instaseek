@@ -18,6 +18,7 @@ along with Instaseek. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import pprint
+import getpass
 
 pp = pprint.PrettyPrinter(indent = 2)
 
@@ -245,3 +246,10 @@ def get_post_image_url(post):
 	if post['media_type'] == 8:
 		return post['carousel_media'][0]['image_versions2']['candidates'][1]['url']
 	return post['image_versions2']['candidates'][1]['url']
+
+def createConfigFile():
+	print('DISCLAIMER:\n\nIn order to acces Instagram API and process Instagram users\' data, you need to provide an Instagram account.\nPlease insert below your Instagram Credentials (we won\'t be using it for other purposes).\n')
+	username = input('Instagram username : ')
+	password = getpass.getpass('Password : ')
+	return '[Instagram]\nuser = %s\npassword = %s' % (username, password)
+	

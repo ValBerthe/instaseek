@@ -28,6 +28,7 @@ import os
 import configparser
 import numpy as np
 
+from ast import literal_eval as make_tuple
 from statistics import mean, stdev
 from io import BytesIO
 from collections import Counter
@@ -45,6 +46,9 @@ from PIL import Image
 from colormath.color_objects import LabColor, sRGBColor
 from colormath.color_conversions import convert_color
 from mpl_toolkits.mplot3d import Axes3D
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.svm import LinearSVC
+from sklearn.calibration import CalibratedClassifierCV
 
 sys.path.append(os.path.dirname(__file__))
 
@@ -54,10 +58,9 @@ from utils import get_post_image_url
 
 ### On set les chemins d'accès et le prettyprinter. ###
 pp = pprint.PrettyPrinter(indent=2)
-comments_model_path = os.path.join(
-	os.path.dirname(__file__), '../models/comments.model')
-users_model_path = os.path.join(os.path.dirname(
-	__file__), '../models/users_sample.model')
+comments_model_path = os.path.join(os.path.dirname(__file__), '../models/comments.model')
+biographies_model_path = os.path.join(os.path.dirname(__file__), '../models/biographies.model')
+users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
 config_path = os.path.join(os.path.dirname(__file__), './config.ini')
 
 N_CLUSTERS = 3
@@ -101,97 +104,6 @@ class User(object):
 		self.K_ = 7
 		self.B = 0.5
 
-	def __uiFormatInt(self, n):
-		"""
-		Conversion du nombre de followers/abonnements en K (mille) et M (million).
-
-		Args:
-				n (int) : nombre à convertir en format souhaité.
-
-		Returns:
-				(str) Un string formatté.
-		"""
-
-		if n > 1000000:
-			return '{:.1f}M'.format(n / 1000000)
-		elif n > 1000:
-			return '{:.1f}K'.format(n / 1000)
-		return n
-
-	def __uiGetIlya(self, _time):
-		"""
-		Génération du string (exemple) :
-		Il y a 15 jours, 0 heure, 36 minutes et 58 secondes.
-
-		Args:
-				_time (int) le temps en format POSIX.
-
-		Returns:
-				(str) Un string formatté.
-		"""
-
-		### Différence de time POSIX (donc des secondes) entre le temps considéré, et la date actuelle. ###
-		ilya = math.floor(time.time() - _time)
-
-		### Définition des mutliplicateurs jours, heures, secondes. ###
-		days_mult = 60 * 60 * 24
-		hours_mult = 60 * 60
-		minutes_mult = 60
-
-		### Conversion et troncage des jours, heures, secondes pour le formatttage en chaine de caractère. ###
-		days = ilya // days_mult
-		hours = (ilya - days * days_mult) // hours_mult
-		minutes = (ilya - days * days_mult -
-				   hours * hours_mult) // minutes_mult
-		seconds = ilya % minutes_mult
-
-		### On retourne les valeurs en prenant en compte les singuliers et pluriels. ###
-		return '%s jour%s, %s heure%s, %s minute%s, %s seconde%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
-
-	def __calculateFrequency(self, n, min_time):
-		"""
-		Calcul de la fréquence de post.
-
-		Args:
-				n (int) : le nombre de posts à considérer dans l'intervalle de temps donné.
-				min_time (int) : le plus vieux post, à comparer avec la date actuelle.
-
-		Returns:
-				(int) La fréquence de post.
-		"""
-
-		### Différence de time POSIX (donc des secondes) entre le post le plus ancien, et la date actuelle. ###
-		ilya = math.floor(time.time() - min_time)
-
-		### Calcul de la fréquence de post. ###
-		days = ilya // (60 * 60 * 24)
-		days = days if days != 0 else 1
-		return n / days
-
-	def __calcCentroid3d(self, _list):
-		"""
-		Calcul des distances de tous les points au barycentre des points de couleur dans le repère lab*.
-
-		Args:
-				_list ((int * 3)[]) : liste de points 3D dont on veut calculer le barycentre.
-
-		Returns:
-				(int) La distance moyenne de tous les points du nuage au barycentre de ce dernier.
-		"""
-
-		arr = np.array(_list)
-		length = arr.shape[0]
-		sum_x = np.sum(arr[:, 0])
-		sum_y = np.sum(arr[:, 1])
-		sum_z = np.sum(arr[:, 2])
-
-		### Calcul des coordonnées du barycentre. ###
-		centroid = np.array([sum_x/length, sum_y/length, sum_z/length])
-
-		### Calcul des distances de tous les points au barycentre. ###
-		distances = [np.linalg.norm(data - centroid) for data in _list]
-		return mean(distances)
-
 	def getUserNames(self, limit = 0):
 		"""
 		Récupère les usernames des utilisateurs annotés.
@@ -229,6 +141,25 @@ class User(object):
 		### On essaye d'extraire les features du profil Instagram. 								  					 ###
 		### Si il y a une erreur, on pass (on ne veut pas break e script en cas de re-promptage). 					 ###
 		### Les `time.sleep` préviennent des erreurs 503, dues à une sollicitation trop soudaine de l'API Instagram. ###
+
+		if not os.path.isfile(os.path.join(comments_model_path)):
+			print('Creating comments model...')
+
+			### Crée le modèle de commentaires s'il n'existe pas. ###
+			self.createCommentsModel()
+		
+		if not os.path.isfile(os.path.join(biographies_model_path)):
+			print('Creating biographies model...')
+
+			### Crée le modèle de biographies s'il n'existe pas. ###
+			self.createBiographiesModel()
+
+		### Charge le modèle de commentaires. ###
+		self.comments_model = pickle.load(open(comments_model_path, 'rb'))
+
+		### Charge le modèle de biographies. ###
+		self.count_vect, self.tfidf_transformer, self.clf = pickle.load(open(biographies_model_path, 'rb'))
+
 		try:
 			username = self.username
 
@@ -239,12 +170,9 @@ class User(object):
 			self.InstagramAPI.searchUsername(username)
 			user_server = self.InstagramAPI.LastJson['user']
 
-			time.sleep(1)
-
 			### On récupère le feed entier de l'utilisateur, afin d'analyser certaines métriques. ###
-			feed = self.InstagramAPI.getTotalUserFeed(user_server['pk'])
-
-			time.sleep(1)
+			self.InstagramAPI.getUserFeed(user_server['pk'])
+			feed = self.InstagramAPI.LastJson['items']
 
 			### On initialise les listes utiles pour l'étude. ###
 			rates = list()
@@ -261,7 +189,7 @@ class User(object):
 			### On boucle sur le feed afin d'en extraire les données pertinentes pour le calcul de nos features. 					  ###
 			### On prend 50 posts du feed pour ne pas avoir un temps d'éxécution trop long. 										  ###
 			### TODO: demander à l'API de ne pas récupérer l'intégralité des posts de l'utilisateur, mais simplement les 50 premiers. ###
-			for index, post in enumerate(feed[:50]):
+			for index, post in enumerate(feed):
 
 				### On affiche l'état de progression de l'analyse. ###
 				print('Post %s/%s...' %
@@ -316,7 +244,7 @@ class User(object):
 
 						### On ajoute la couleur dominante du post pour une analyse colorimétrique. ###
 						most_dominant_colour = self.getMostDominantColour(img)
-						dominant_colors_list.extend(most_dominant_colour)
+						dominant_colors_list.append(most_dominant_colour)
 
 						### On récupère le taux de colorité de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
 						colorfulness = self.getImageColorfulness(img)
@@ -324,7 +252,8 @@ class User(object):
 
 						### On récupère le taux de contraste de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
 						contrast = self.getContrast(grayscale_img)
-						contrast_list.append(contrast)
+						if not math.isnan(contrast):
+							contrast_list.append(contrast)
 					except Exception as e:
 						print('Error while getting image info (user.py): %s' % e)
 
@@ -337,7 +266,7 @@ class User(object):
 					self.InstagramAPI.getMediaComments(str(post['id']))
 					comments_server = self.InstagramAPI.LastJson
 
-					time.sleep(1)
+					#time.sleep(1)
 
 					### On cherche tous les commentaires retournés dans la variable `comments_server`. ###
 					if 'comments' in comments_server:
@@ -354,7 +283,7 @@ class User(object):
 							score = self.getCommentScore(comment['text'])
 							comment_scores.append(score)
 
-							time.sleep(1)
+							#time.sleep(1)
 
 				except Exception as e:
 					### Si on a une erreur, on attend une minute avant de recommencer l'opération. ###
@@ -372,7 +301,7 @@ class User(object):
 			if len(rates) > 0:
 				avg = mean(rates)
 				self.lastpost = time.time() - max(timestamps)
-				self.frequency = self.__calculateFrequency(
+				self.frequency = self.calculateFrequency(
 					len(feed), min(timestamps))
 				self.engagement = avg
 				self.followings = int(user_server['following_count'])
@@ -383,6 +312,7 @@ class User(object):
 				self.brandtypes = self.getBrandTypes(brpscs)
 				self.commentscore = mean(
 					comment_scores) * (1 + stdev(comment_scores))
+				self.biographyscore = self.getBiographyScore(user_server['biography'])
 				self.colorfulness_std = stdev(colorfulness_list) if len(
 					colorfulness_list) > 1 else 0
 				self.contrast_std = stdev(contrast_list) if len(
@@ -391,18 +321,19 @@ class User(object):
 							   for color in dominant_colors_list]
 				self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(
 					np.array(self.colors), self.n_clusters)
-				self.colors_dispersion = self.__calcCentroid3d(self.colors)
+				self.colors_dispersion = self.calcCentroid3d(self.colors)
 
 				print('Username : %s' % self.username)
-				print('Last post: %s' % self.__uiGetIlya(max(timestamps)))
+				print('Last post: %s' % self.uiGetIlya(max(timestamps)))
 				print('Frequency: %.2f' % float(self.frequency))
 				print('Engagement: %.2f%%' % float(self.engagement))
-				print('N followings: %s' % self.__uiFormatInt(self.followings))
-				print('N followers: %s' % self.__uiFormatInt(self.followers))
+				print('N followings: %s' % self.uiFormatInt(self.followings))
+				print('N followers: %s' % self.uiFormatInt(self.followers))
 				print('User mentions: %s' %
-					  self.__uiFormatInt(self.usermentions))
+					  self.uiFormatInt(self.usermentions))
 				print('Brand presence: %s' % str(self.brandpresence))
 				print('Brand types: %s' % str(self.brandtypes))
+				print('Biography score: %s' % str(self.biographyscore))
 				print('Comments score: %s' % str(self.commentscore))
 				print('Colorfulness standard deviation: %s' %
 					  self.colorfulness_std)
@@ -433,7 +364,7 @@ class User(object):
 		"""
 
 		self.sqlClient.openCursor()
-		posts = self.sqlClient.getUser(self.username)
+		posts = self.sqlClient.getUserPosts(self.username)
 
 		###	Initialisation des listes de stockage pour les métriques. ###
 		rates = list()
@@ -443,6 +374,24 @@ class User(object):
 		colorfulness_list = list()
 		dominant_colors_list = list()
 		contrast_list = list()
+
+		if not os.path.isfile(os.path.join(comments_model_path)):
+			print('Creating comments model...')
+
+			### Crée le modèle de commentaires s'il n'existe pas. ###
+			self.createCommentsModel()
+		
+		if not os.path.isfile(os.path.join(biographies_model_path)):
+			print('Creating biographies model...')
+
+			### Crée le modèle de biographies s'il n'existe pas. ###
+			self.createBiographiesModel()
+
+		### Charge le modèle de commentaires. ###
+		self.comments_model = pickle.load(open(comments_model_path, 'rb'))
+
+		### Charge le modèle de biographies. ###
+		self.count_vect, self.tfidf_transformer, self.clf = pickle.load(open(biographies_model_path, 'rb'))
 
 		for index, post in enumerate(posts):
 			### Timestamps et taux d'engagement: métriques immédiates. ###
@@ -488,7 +437,7 @@ class User(object):
 
 					### On ajoute la couleur dominante du post pour une analyse colorimétrique. ###
 					most_dominant_colour = self.getMostDominantColour(img)
-					dominant_colors_list.extend(most_dominant_colour)
+					dominant_colors_list.append(most_dominant_colour)
 
 					### On récupère le taux de colorité de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
 					colorfulness = self.getImageColorfulness(img)
@@ -511,7 +460,9 @@ class User(object):
 				brpscs.extend(brpsc)
 			"""
 			# On récupère les commentaires depuis la BDD, grâce à l'ID du post.
+			self.sqlClient.openCursor()
 			comments = self.sqlClient.getComments(str(post['id_post']))
+			self.sqlClient.closeCursor()
 
 			### On parcourt les commentaires du post pour en extraire le "score de commentaires". ###
 			for comment in comments:
@@ -519,6 +470,8 @@ class User(object):
 					continue
 				score = self.getCommentScore(comment['comment'])
 				comment_scores.append(score)
+
+			biography_score = self.getBiographyScore(post['biography'])
 
 			### Si le nombre de commentaires est trop bas, on affecte des valeurs particulières.  ###
 			### En effet, la variance d'une VA prend en arguments deux points de données minimum. ###
@@ -535,7 +488,7 @@ class User(object):
 			avg = mean(rates)
 			self.engagement = avg
 			self.lastpost = time.time() - max(timestamps)
-			self.frequency = self.__calculateFrequency(len(posts), min(timestamps))
+			self.frequency = self.calculateFrequency(len(posts), min(timestamps))
 			self.followings = int(posts[0]['n_following'])
 			self.followers = int(posts[0]['n_follower'])
 			self.usermentions = int(posts[0]['n_usertags'])
@@ -543,6 +496,7 @@ class User(object):
 			self.brandpresence = brpscs
 			self.brandtypes = self.getBrandTypes(brpscs)
 			self.commentscore = commentscore
+			self.biographyscore = biography_score
 			self.colorfulness_std = stdev(colorfulness_list) if len(colorfulness_list) > 1 else 0
 			self.contrast_std = stdev(contrast_list) if len(contrast_list) > 1 else 0
 			self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
@@ -562,8 +516,101 @@ class User(object):
 					continue
 				break
 			self.label = int(post['label'])
+			self.testset = post['test_set']
+
 		else:
 			print('This user has no posts !')
+
+	def uiFormatInt(self, n):
+		"""
+		Conversion du nombre de followers/abonnements en K (mille) et M (million).
+
+		Args:
+				n (int) : nombre à convertir en format souhaité.
+
+		Returns:
+				(str) Un string formatté.
+		"""
+
+		if n > 1000000:
+			return '{:.1f}M'.format(n / 1000000)
+		elif n > 1000:
+			return '{:.1f}K'.format(n / 1000)
+		return str(n)
+
+	def uiGetIlya(self, _time):
+		"""
+		Génération du string (exemple) :
+		Il y a 15 jours, 0 heure, 36 minutes et 58 secondes.
+
+		Args:
+				_time (int) le temps en format POSIX.
+
+		Returns:
+				(str) Un string formatté.
+		"""
+
+		### Différence de time POSIX (donc des secondes) entre le temps considéré, et la date actuelle. ###
+		ilya = math.floor(time.time() - _time)
+
+		### Définition des mutliplicateurs jours, heures, secondes. ###
+		days_mult = 60 * 60 * 24
+		hours_mult = 60 * 60
+		minutes_mult = 60
+
+		### Conversion et troncage des jours, heures, secondes pour le formatttage en chaine de caractère. ###
+		days = ilya // days_mult
+		hours = (ilya - days * days_mult) // hours_mult
+		minutes = (ilya - days * days_mult -
+				   hours * hours_mult) // minutes_mult
+		seconds = ilya % minutes_mult
+
+		### On retourne les valeurs en prenant en compte les singuliers et pluriels. ###
+		return '%s jour%s, %s heure%s, %s minute%s, %s seconde%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
+
+	def calculateFrequency(self, n, min_time):
+		"""
+		Calcul de la fréquence de post.
+
+		Args:
+				n (int) : le nombre de posts à considérer dans l'intervalle de temps donné.
+				min_time (int) : le plus vieux post, à comparer avec la date actuelle.
+
+		Returns:
+				(int) La fréquence de post.
+		"""
+
+		### Différence de time POSIX (donc des secondes) entre le post le plus ancien, et la date actuelle. ###
+		ilya = math.floor(time.time() - min_time)
+
+		### Calcul de la fréquence de post. ###
+		days = ilya // (60 * 60 * 24)
+		days = days if days != 0 else 1
+		return float(n / days)
+
+	def calcCentroid3d(self, _list):
+		"""
+		Calcul des distances de tous les points au barycentre des points de couleur dans le repère lab*.
+
+		Args:
+				_list ((int * 3)[]) : liste de points 3D dont on veut calculer le barycentre.
+
+		Returns:
+				(int) La distance moyenne de tous les points du nuage au barycentre de ce dernier.
+		"""
+
+		arr = np.array(_list)
+		length = arr.shape[0]
+		sum_x = np.sum(arr[:, 0])
+		sum_y = np.sum(arr[:, 1])
+		sum_z = np.sum(arr[:, 2])
+
+		### Calcul des coordonnées du barycentre. ###
+		centroid = np.array([sum_x/length, sum_y/length, sum_z/length])
+
+		### Calcul des distances de tous les points au barycentre. ###
+		distances = [np.linalg.norm(data - centroid) for data in _list]
+		return float(mean(distances))
 
 	def getMostDominantColour(self, image):
 		"""
@@ -580,7 +627,6 @@ class User(object):
 		NUM_CLUSTERS = 5
 
 		### On resize l'image pour que les temps de traitement soient réduits. ###
-		image = image.resize((150, 150))
 
 		ar = np.array(image)
 		shape = ar.shape
@@ -597,8 +643,7 @@ class User(object):
 
 		### Conversion de la couleur RGB dans l'espace lab*. ###
 		rgb = sRGBColor(*peak)
-		lab = convert_color(rgb, LabColor)
-		return [lab]
+		return convert_color(rgb, LabColor)
 
 	def getImageColorfulness(self, image):
 		"""
@@ -617,14 +662,14 @@ class User(object):
 		open_cv_image = ar[:, :, ::-1].copy()
 
 		### Performe une analyse des composantes RGB de l'image. ###
-		(B, G, R) = cv2.split(open_cv_image.astype("float"))
+		B, G, R, *A = cv2.split(open_cv_image.astype("float"))
 		rg = np.absolute(R - G)
 		yb = np.absolute(0.5 * (R + G) - B)
 		(rbMean, rbStd) = (np.mean(rg), np.std(rg))
 		(ybMean, ybStd) = (np.mean(yb), np.std(yb))
 		stdRoot = np.sqrt((rbStd ** 2) + (ybStd ** 2))
 		meanRoot = np.sqrt((rbMean ** 2) + (ybMean ** 2))
-		return stdRoot + (0.3 * meanRoot)
+		return float(stdRoot + (0.3 * meanRoot))
 
 	def getContrast(self, img):
 		"""
@@ -648,7 +693,7 @@ class User(object):
 		data = data / data.sum()
 
 		### On retourne le calcul de l'entropie. ###
-		return - (data * np.log(np.abs(data))).sum()
+		return float(- (data * np.log(np.abs(data))).sum())
 
 	def getBrandPresence(self, post):
 		"""
@@ -674,17 +719,18 @@ class User(object):
 			text = post['caption']['text']
 
 			### On ajoute un '@' pour matcher avec les mentions trouvées dans la description du post. ###
-			usertags = ['@%s' % user['user']['username']
-						for user in post['usertags']['in']]
+			if hasattr(post, 'usertags'):
+				usertags = ['@%s' % user['user']['username'] for user in post['usertags']['in']]
 
-			### On match les mentions utilisateur dans la description du post. ###
-			matches = regex.findall(r'@[\w\.]+', text)
+				### On match les mentions utilisateur dans la description du post. ###
+				matches = regex.findall(r'@[\w\.]+', text)
 
-			### Si il y a un utilisateur qui se retrouve à la fois tagué sur la photo et en description du post, alors on l'extrait. 			###
-			### Ce modèle est perfectible, on peut aussi décider de s'occuper uniquement des personnes taguées et/ou des personnes mentionnées. ###
-			for match in matches:
-				if match in usertags:
-					brands.append(match.split('@')[1])
+				### Si il y a un utilisateur qui se retrouve à la fois tagué sur la photo et en description du post, alors on l'extrait. 			###
+				### Ce modèle est perfectible, on peut aussi décider de s'occuper uniquement des personnes taguées et/ou des personnes mentionnées. ###
+				for match in matches:
+					if match in usertags:
+						brands.append(match.split('@')[1])
+			
 			return brands
 
 		except:
@@ -715,8 +761,34 @@ class User(object):
 			if 'category' in brand_full:
 				brand_counter[brand_full['category']] += 1
 		return brand_counter
+	
+	def getBiographyScore(self, bio):
+		"""
+		Retourne le score de biographie basé sur le modèle de biographies.
+		
+				Args:
+					comment (str): la biographie sous forme de texte.
+				
+				Returns:
+					(int) Le score de qualité de biographie.
+		"""
+
+		if not os.path.isfile(os.path.join(biographies_model_path)):
+			print('Creating biographies model...')
+
+			### Crée le modèle de biographies s'il n'existe pas. ###
+			self.createBiographiesModel()
+
+		self.count_vect, self.tfidf_transformer, self.clf = pickle.load(open(biographies_model_path, 'rb'))
+
+		X_test_counts = self.count_vect.transform([bio])
+		self.X_test_tfidf = self.tfidf_transformer.transform(X_test_counts)
+
+		pred = self.clf.predict_proba(self.X_test_tfidf)[0][1]
+		return float(pred)
 
 	def getCommentScore(self, comment):
+		
 		"""
 		Retourne le score de commentaire basé sur le modèle de commentaires.
 		Les commentaire les plus pertinents pour une photo (= dont les mots importants sont peu utilisés dans le modèle de commentaires) sont privilégiés.
@@ -730,14 +802,7 @@ class User(object):
 		"""
 
 		### Pickle le modèle (dictionnaire de mots contenus dans les commentaires + leurs occurences) pour ne pas avoir à le générer à chaque run. ###
-		if not os.path.isfile(os.path.join(comments_model_path)):
-			print('Creating comments model...')
-
-			### Crée le modèle de commentaires s'il n'existe pas. ###
-			self.createCommentsModel()
-
-		### Charge le modèle de commentaires. ###
-		model = pickle.load(open(comments_model_path, 'rb'))
+		
 
 		### Liste des scores de commentaires. ###
 		word_scores = list()
@@ -751,8 +816,8 @@ class User(object):
 			if _word:
 
 				### Attribue un score de commentaire inversement proportionnel à ses occurences dans tous les commentaires de la BDD. ###
-				if model[_word] > 0:
-					word_score = 1 / model[_word]
+				if self.comments_model[_word] > 0:
+					word_score = 1 / self.comments_model[_word]
 
 				else:
 					word_score = 1
@@ -773,6 +838,7 @@ class User(object):
 		### De ce fait, si les mots-clés du commentaire sont 'importants' = si leur score est élevé, alors l'écart-type sera important. ###
 		j = 1 / (1 + math.exp(- self.K_ * (stdev(word_scores) - self.B))
 				 ) if len(word_scores) > 1 else 0
+
 		return k * j * comment_score * len(word_scores)
 
 	def createCommentsModel(self):
@@ -821,6 +887,43 @@ class User(object):
 		### Sauvegarde le modèle dans le dossier models. ###
 		with open(os.path.join(comments_model_path), 'wb') as outfile:
 			pickle.dump(comment_count, outfile)
+
+	def createBiographiesModel(self):
+		"""
+		Crée le modèle de commentaires.
+
+				Args:
+					(none)
+				
+				Returns:
+					(none)
+		"""
+
+		### Récupère toutes les biographies des utilisateurs annotés. ###
+		self.sqlClient.openCursor()
+		response = self.sqlClient.getAllBiographies()
+		self.sqlClient.closeCursor()
+
+		### Récupération des champs biographies, et labels. ###
+		bios = [row['biography'] for row in response]
+		labels = [row['label'] for row in response]
+		
+		### Construction du modèle TF-IDF et apprentissage d'un classifieur calibré pour sortir des probabilités. ###
+		### Vecteurs de comptage. ###
+		self.count_vect = CountVectorizer()
+		X_train_counts = self.count_vect.fit_transform(bios)
+
+		### Transformateur TF-IDF. ###
+		self.tfidf_transformer = TfidfTransformer()
+		self.X_train_tfidf = self.tfidf_transformer.fit_transform(X_train_counts)
+
+		### Entraînement du classificateur. ###
+		oneVsRest = CalibratedClassifierCV()
+		self.clf = oneVsRest.fit(self.X_train_tfidf, labels)
+
+		### Sauvegarde du modèle. ###
+		with open(os.path.join(biographies_model_path), 'wb') as outfile:
+			pickle.dump((self.count_vect, self.tfidf_transformer, self.clf), outfile)
 
 	def processWordComment(self, word):
 		"""

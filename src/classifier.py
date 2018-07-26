@@ -43,10 +43,24 @@ sys.path.append(os.path.dirname(__file__))
 ### Custom libs. ###
 from user import User
 from train import Trainer
+from sql_client import SqlClient
 
 ### Instanciation du classificateur. ###
 pp = pprint.PrettyPrinter(indent = 2)
 classifier = Trainer()
+user = User()
+sqlClient = SqlClient()
 
-### Classe un utilisateur en influenceur/non influenceur. ###
-classifier.classify_user()
+users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
+
+if __name__ == "__main__":
+    """
+    INSERT TESTS HERE
+    """
+
+    """
+    END INSERT TESTS
+    """
+
+    ### Classe un utilisateur en influenceur/non influenceur. ###
+    classifier.classify_user()

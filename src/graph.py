@@ -34,42 +34,44 @@ from sql_client import SqlClient
 
 pp = pprint.PrettyPrinter(indent = 2)
 
-### Définition du graphe. ###
-G = nx.DiGraph()
+if __name__ == "__main__":
 
-sqlClient = SqlClient()
+    ### Définition du graphe. ###
+    G = nx.DiGraph()
 
-### Récupère tous les likes pour effectuer un graphe de liker/liké. ###
-sqlClient.openCursor()
-likes = sqlClient.getAllLikes(500)
-sqlClient.closeCursor()
+    sqlClient = SqlClient()
 
-### Ajout des nodes et des edges via. la requête à la BDD. ###
-G.add_edges_from(likes)
+    ### Récupère tous les likes pour effectuer un graphe de liker/liké. ###
+    sqlClient.openCursor()
+    likes = sqlClient.getAllLikes(500)
+    sqlClient.closeCursor()
 
-'''d_in=G.in_degree(G)
-d_out=G.out_degree(G)
-g2 = G.copy()
-for n in g2.nodes():
-    if d_in[n]==0 and d_out[n] == 1: 
-        G.remove_node(n)'''
+    ### Ajout des nodes et des edges via. la requête à la BDD. ###
+    G.add_edges_from(likes)
 
-### Show Graph. ###
+    '''d_in=G.in_degree(G)
+    d_out=G.out_degree(G)
+    g2 = G.copy()
+    for n in g2.nodes():
+        if d_in[n]==0 and d_out[n] == 1: 
+            G.remove_node(n)'''
 
-options = {
-    'node_color': 'lightBlue',
-    'node_size': 10,
-    'width': 1,
-    'with_labels': False
-}
+    ### Show Graph. ###
 
-#plt.subplot(221)
-#nx.draw_spring(G, **options)
-#plt.subplot(222)
-#nx.draw_circular(G, **options)
-#plt.subplot(223)
-nx.draw(G, **options)
-#plt.subplot(224)
-#nx.draw_shell(G, nlist=[range(5), range(5, 10), range(10, 15), range(15, 20), range(20, 25), range(25, 30)], **options)
+    options = {
+        'node_color': 'lightBlue',
+        'node_size': 10,
+        'width': 1,
+        'with_labels': False
+    }
 
-plt.show()
+    #plt.subplot(221)
+    #nx.draw_spring(G, **options)
+    #plt.subplot(222)
+    #nx.draw_circular(G, **options)
+    #plt.subplot(223)
+    nx.draw(G, **options)
+    #plt.subplot(224)
+    #nx.draw_shell(G, nlist=[range(5), range(5, 10), range(10, 15), range(15, 20), range(20, 25), range(25, 30)], **options)
+
+    plt.show()

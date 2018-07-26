@@ -22,7 +22,21 @@ import os
 
 sys.path.append(os.path.dirname(__file__))
 
-from streamer import Streamer
+config_path = os.path.join(os.path.dirname(__file__), './config.ini')
+
+from train import Trainer
+from utils import createConfigFile
 
 if __name__ == '__main__':
-    Streamer().start_stream()
+
+    if not os.path.isfile(os.path.join(config_path)):
+        content = createConfigFile()
+        with open(config_path, 'w') as file:
+            file.write(content)
+
+    while True:
+        try:
+            Trainer().classify_user()
+        except Exception as e:
+            print(e)
+            break

@@ -41,6 +41,7 @@ sys.path.append(os.path.dirname(__file__))
 
 ### Custom libs. ###
 from user import User
+from sql_client import SqlClient
 
 ### Setup du PrettyPrinter, ainsi que des chemin d'accès aux fichiers. ###
 pp = pprint.PrettyPrinter(indent = 2)
@@ -63,6 +64,7 @@ class Trainer(object):
 
 		super().__init__()
 		self.key_features = [
+			#'biographyscore',
 			'commentscore', 
 			'engagement',
 			'followers',
@@ -79,6 +81,7 @@ class Trainer(object):
 		self.labels = list()
 		self.split_ratio = split_ratio
 		self.users_array = list()
+		self.sqlClient = SqlClient()
 
 	def buildUsersModel(self):
 		"""
@@ -128,7 +131,9 @@ class Trainer(object):
 				'brandpresence': self.user_model.brandpresence,
 				'brandtypes': self.user_model.brandtypes,
 				'commentscore': self.user_model.commentscore,
-				'label': self.user_model.label
+				'biographyscore': self.user_model.biographyscore,
+				'label': self.user_model.label,
+				'testset': self.user_model.testset
 			}
 			self.users_array.append(item)
 
@@ -146,6 +151,40 @@ class Trainer(object):
 		
 		### On mélange les résultats pour ne pas avoir toujours les mêmes répartitions coup sur coup. ###
 		self.features_array, self.labels, self.users_array = shuffle(self.features_array, self.labels, self.users_array, random_state = 0)
+
+	def alterUsersModel(self):
+		"""
+		Au lieu de reconstruire le modèle d'utilisateurs à chaque fois, on change juste un champ pour des modifications occasionnelles.
+
+				Args:
+					(none)
+				Returns:
+					(none)
+		"""
+		
+		self.user_model = User()
+
+		### Charge le tableau des utilisateurs dont les features sont déjà extraites. ###
+		if os.path.isfile(users_model_path):
+			with open(users_model_path, 'rb') as f:
+				users_array = pickle.load(f)
+
+		adjusted_users = list()
+
+		for user in users_array:
+			
+			self.sqlClient.openCursor()
+			sqluser = self.sqlClient.getUser(user['username'])
+			self.sqlClient.closeCursor()
+
+			pp.pprint(sqluser)
+
+			if sqluser['test_set'] == True:
+				user['biographyscore'] = self.user_model.getBiographyScore(sqluser['biography'])
+			adjusted_users.append(user)
+			
+		with open(users_model_path, 'wb') as f:
+			pickle.dump(adjusted_users, f)
 
 	def train(self):
 		"""
@@ -264,7 +303,8 @@ class Trainer(object):
 				user.username = username
 				user.getUserInfoIG()
 				vector = [[
-					user.commentscore, 
+					#user.biographyscore, 
+					user.commentscore,
 					user.engagement,
 					user.followers,
 					user.followings,
@@ -279,7 +319,7 @@ class Trainer(object):
 				### Prédiction. ###
 				pred = clf.predict(vector)
 				y_score = clf.predict_proba(vector)
-				print('%s, score: %s' % ('Yes' if pred == 1 else 'No', y_score))
+				print('%s Score: %s\n' % ('Influencer !' if pred == 1 else 'Not an influencer.', str(y_score[0][1] * 100) + '%%'))
 
 if __name__ == "__main__":
 	trainer = Trainer()
