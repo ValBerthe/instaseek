@@ -2,8 +2,12 @@
 
 ## Setup
 
-- Install Python 3.6: https://www.python.org/downloads/release/python-360/
+- Install [Python 3.6](https://www.python.org/downloads/release/python-360/)
 - `pip install -r requirements.txt` to install Python dependencies
+
+## Docs
+
+You can check out docs [here](https://valberthe.github.io/).
 
 ## Manual
 
