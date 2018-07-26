@@ -294,7 +294,7 @@ def test_uiFormatInt_big(user, bigInt):
 def test_uiGetIlya(user, ilya):
     result = user.uiGetIlya(ilya)
     assert type(result) is str
-    assert 'seconde' in result
+    assert 'second' in result
 
 def test_calculateFrequency(user, numberOfPosts, oldestPost):
     result = user.calculateFrequency(numberOfPosts, oldestPost)

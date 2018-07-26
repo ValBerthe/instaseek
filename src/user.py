@@ -85,7 +85,7 @@ class User(object):
 		self.username = ''
 
 		### Instanciation du client SQL. ###
-		self.sqlClient = SqlClient()
+		
 		self.n_clusters = N_CLUSTERS
 
 		### Initialisation des features pour l'apprentissage. ###
@@ -114,6 +114,7 @@ class User(object):
 		Returns:
 				(list) : la liste des noms d'utilisateur issus de la BDD.
 		"""
+		self.sqlClient = SqlClient()
 
 		self.sqlClient.openCursor()
 		allUsers = self.sqlClient.getUserNames(limit, labeled=True)
@@ -362,6 +363,7 @@ class User(object):
 				Returns:
 						(none)
 		"""
+		self.sqlClient = SqlClient()
 
 		self.sqlClient.openCursor()
 		posts = self.sqlClient.getUserPosts(self.username)
@@ -566,7 +568,7 @@ class User(object):
 		seconds = ilya % minutes_mult
 
 		### On retourne les valeurs en prenant en compte les singuliers et pluriels. ###
-		return '%s jour%s, %s heure%s, %s minute%s, %s seconde%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
+		return '%s day%s, %s hour%s, %s minut%s, %s second%s' % (days, '' if days in [0, 1] else 's', hours, '' if hours in [0, 1] else 's', minutes, '' if minutes in [0, 1] else 's', seconds, '' if seconds in [0, 1] else 's')
 
 	def calculateFrequency(self, n, min_time):
 		"""
@@ -852,6 +854,8 @@ class User(object):
 					(none)
 		"""
 
+		self.sqlClient = SqlClient()
+
 		### Récupère tous les commentaires en base. ###
 		self.sqlClient.openCursor()
 		comments = self.sqlClient.getAllComments()
@@ -898,6 +902,8 @@ class User(object):
 				Returns:
 					(none)
 		"""
+
+		self.sqlClient = SqlClient()
 
 		### Récupère toutes les biographies des utilisateurs annotés. ###
 		self.sqlClient.openCursor()

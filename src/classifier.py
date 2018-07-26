@@ -48,8 +48,6 @@ from sql_client import SqlClient
 ### Instanciation du classificateur. ###
 pp = pprint.PrettyPrinter(indent = 2)
 classifier = Trainer()
-user = User()
-sqlClient = SqlClient()
 
 users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
 

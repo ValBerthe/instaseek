@@ -81,7 +81,6 @@ class Trainer(object):
 		self.labels = list()
 		self.split_ratio = split_ratio
 		self.users_array = list()
-		self.sqlClient = SqlClient()
 
 	def buildUsersModel(self):
 		"""
@@ -93,6 +92,8 @@ class Trainer(object):
 					(none)
 				
 		"""
+
+		self.sqlClient = SqlClient()
 
 		### On récupère toutes les features nécessaires pour entraîner le modèle. ###
 		self.user_model = User()
@@ -162,6 +163,7 @@ class Trainer(object):
 					(none)
 		"""
 		
+		self.sqlClient = SqlClient()
 		self.user_model = User()
 
 		### Charge le tableau des utilisateurs dont les features sont déjà extraites. ###
@@ -302,35 +304,31 @@ class Trainer(object):
 				user = User()
 				user.username = username
 				user.getUserInfoIG()
-				vector = [[
-					#user.biographyscore, 
-					user.commentscore,
-					user.engagement,
-					user.followers,
-					user.followings,
-					user.nmedias,
-					user.lastpost,
-					user.usermentions,
-					user.colorfulness_std,
-					user.color_distorsion,
-					user.contrast_std
-				]]
+				try:
+					vector = [[
+						#user.biographyscore, 
+						user.commentscore,
+						user.engagement,
+						user.followers,
+						user.followings,
+						user.nmedias,
+						user.lastpost,
+						user.usermentions,
+						user.colorfulness_std,
+						user.color_distorsion,
+						user.contrast_std
+					]]
 
-				### Prédiction. ###
-				pred = clf.predict(vector)
-				y_score = clf.predict_proba(vector)
-				print('%s Score: %s\n' % ('Influencer !' if pred == 1 else 'Not an influencer.', str(y_score[0][1] * 100) + '%%'))
+					### Prédiction. ###
+					pred = clf.predict(vector)
+					y_score = clf.predict_proba(vector)
+					print('Result:\n\n%s\nScore: %s\n' % ('Influencer !' if pred == 1 else 'Not an influencer.', str(y_score[0][1] * 100) + '%'))
+				
+				except Exception as e:
+					print('The user doesn\'t exist or has a private account. Please try again.')
+					pass
 
 if __name__ == "__main__":
 	trainer = Trainer()
 	trainer.buildUsersModel()
 	trainer.train()
-
-
-
-
-
-
-
-
-
