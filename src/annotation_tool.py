@@ -61,7 +61,7 @@ def annotate():
 		sqlClient.closeCursor()
 
 		sqlClient.openCursor()
-		if sqlClient.getTestRatio > 0.25:
+		if sqlClient.getTestRatio() < 0.25:
 			sqlClient.setTest(username, True)
 		sqlClient.closeCursor()
 

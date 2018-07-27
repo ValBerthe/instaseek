@@ -805,22 +805,6 @@ class SqlClient(object):
 		keys = [desc[0] for desc in self.cursor.description]
 		return [dict(zip(keys, value)) for value in values]
 
-	def getAllLikes(self, n = 0):
-		"""
-		Retourne n likes en base de données.
-		"""
-		self.cursor.execute('''
-			SELECT l.user_id, p.user_id FROM public.likes as l
-			INNER JOIN public.posts as p
-			ON l.post_id = p.id_post
-			ORDER BY RANDOM()
-			LIMIT %s
-		''' % str(n))
-		values = self.cursor.fetchall()
-		#keys = [desc[0] for desc in self.cursor.description]
-		#return [dict(zip(keys, value)) for value in values]
-		return values
-
 	def getUserPostComments(self, user_id):
 		"""
 		Retourne tous les commentaires que l'utilisateur a eu sur ses posts.
@@ -921,6 +905,22 @@ class SqlClient(object):
 			_result[str(couple[0])] = couple[1]
 		return _result
 		
+	def getAllLikes(self, n = 0):
+		"""
+		Retourne n likes en base de données.
+		"""
+		self.cursor.execute('''
+			SELECT l.user_id, p.user_id FROM public.likes as l
+			INNER JOIN public.posts as p
+			ON l.post_id = p.id_post
+			ORDER BY RANDOM()
+			LIMIT %s
+		''' % str(n))
+		values = self.cursor.fetchall()
+		#keys = [desc[0] for desc in self.cursor.description]
+		#return [dict(zip(keys, value)) for value in values]
+		return values
+
 	def getAllComments(self):
 		"""
 		Récupère tous les commentaires de la BDD.

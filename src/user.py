@@ -183,6 +183,8 @@ class User(object):
 			colorfulness_list = list()
 			dominant_colors_list = list()
 			contrast_list = list()
+			avglikes = list()
+			avgcomments = list()
 
 			### On affiche la longueur du feed retourné par l'API. ###
 			print('Feed is %s post-long' % str(len(feed)))
@@ -198,6 +200,10 @@ class User(object):
 
 				### Si le serveur renvoie une erreur (notamment 503), on attend 1 minute avant de renvoyer une requête. ###
 				try:
+
+					### Ajout du nombre de likes et de commentaires pour moyenner sur le feed. ###
+					avglikes.append(post['like_count'])
+					avgcomments.append(post['comment_count'])
 
 					### On ajoute le timestamp du post pour les analyses de fréquence. ###
 					timestamps.append(int(post['taken_at']))
@@ -305,14 +311,15 @@ class User(object):
 				self.frequency = self.calculateFrequency(
 					len(feed), min(timestamps))
 				self.engagement = avg
+				self.avglikes = mean(avglikes)
+				self.avgcomments = mean(avgcomments)
 				self.followings = int(user_server['following_count'])
 				self.followers = int(user_server['follower_count'])
 				self.usermentions = int(user_server['usertags_count'])
 				self.nmedias = int(user_server['media_count'])
 				self.brandpresence = brpscs
 				self.brandtypes = self.getBrandTypes(brpscs)
-				self.commentscore = mean(
-					comment_scores) * (1 + stdev(comment_scores))
+				self.commentscore = mean(comment_scores) * (1 + stdev(comment_scores))
 				self.biographyscore = self.getBiographyScore(user_server['biography'])
 				self.colorfulness_std = stdev(colorfulness_list) if len(
 					colorfulness_list) > 1 else 0
@@ -328,6 +335,8 @@ class User(object):
 				print('Last post: %s' % self.uiGetIlya(max(timestamps)))
 				print('Frequency: %.2f' % float(self.frequency))
 				print('Engagement: %.2f%%' % float(self.engagement))
+				print('Average like count: %.2f%%' % float(self.avglikes))
+				print('Average comment count: %.2f%%' % float(self.avgcomments))
 				print('N followings: %s' % self.uiFormatInt(self.followings))
 				print('N followers: %s' % self.uiFormatInt(self.followers))
 				print('User mentions: %s' %
@@ -376,6 +385,8 @@ class User(object):
 		colorfulness_list = list()
 		dominant_colors_list = list()
 		contrast_list = list()
+		avglikes = list()
+		avgcomments = list()
 
 		if not os.path.isfile(os.path.join(comments_model_path)):
 			print('Creating comments model...')
@@ -396,8 +407,11 @@ class User(object):
 		self.count_vect, self.tfidf_transformer, self.clf = pickle.load(open(biographies_model_path, 'rb'))
 
 		for index, post in enumerate(posts):
-			### Timestamps et taux d'engagement: métriques immédiates. ###
 
+			avglikes.append(post['n_likes'])
+			avgcomments.append(post['n_comments'])
+
+			### Timestamps et taux d'engagement: métriques immédiates. ###
 			timestamps.append(int(post['timestamp']))
 
 			if post['n_follower'] == 0:
@@ -489,6 +503,8 @@ class User(object):
 		if len(rates) > 1:
 			avg = mean(rates)
 			self.engagement = avg
+			self.avglikes = mean(avglikes)
+			self.avgcomments = mean(avgcomments)
 			self.lastpost = time.time() - max(timestamps)
 			self.frequency = self.calculateFrequency(len(posts), min(timestamps))
 			self.followings = int(posts[0]['n_following'])

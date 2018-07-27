@@ -22,6 +22,7 @@ import sys
 import os
 import pickle
 import random
+import argparse
 import math
 
 ### Installed libs. ###
@@ -63,14 +64,16 @@ class Trainer(object):
 
 		super().__init__()
 		self.key_features = [
-			#'biographyscore',
-			'commentscore', 
+			#'biographyscore', # Construit sur le même jeu d'entrainement que la classification actuelle, à éviter donc jusqu'à trouver une nouvelle solution.
+			'commentscore',
+			'avglikes',
+			'avgcomments',
 			'engagement',
 			'followers',
 			'followings',
 			'nmedias',
-			#'frequency',
-			'lastpost',
+			'frequency',
+			#'lastpost',
 			'usermentions',
 			'colorfulness_std',
 			'color_distorsion',
@@ -172,16 +175,14 @@ class Trainer(object):
 
 		adjusted_users = list()
 
-		for user in users_array:
+		for user in tqdm(users_array):
 			
 			self.sqlClient.openCursor()
-			sqluser = self.sqlClient.getUser(user['username'])
+			posts = self.sqlClient.getUserPosts(user['username'])
 			self.sqlClient.closeCursor()
 
-			pp.pprint(sqluser)
-
-			if sqluser['test_set'] == True:
-				user['biographyscore'] = self.user_model.getBiographyScore(sqluser['biography'])
+			user['avglikes'] = sum([post['n_likes'] for post in posts]) / len(posts)
+			user['avgcomments'] = sum([post['n_comments'] for post in posts]) / len(posts)
 			adjusted_users.append(user)
 			
 		with open(users_model_path, 'wb') as f:
@@ -307,6 +308,8 @@ class Trainer(object):
 					vector = [[
 						#user.biographyscore, 
 						user.commentscore,
+						user.avglikes,
+						user.avgcomments,
 						user.engagement,
 						user.followers,
 						user.followings,
@@ -328,6 +331,13 @@ class Trainer(object):
 					pass
 
 if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--alter-users', action = 'store_true')
+	args = parser.parse_args()
+
 	trainer = Trainer()
+	if args.alter_users:
+		trainer.alterUsersModel()
+	
 	trainer.buildUsersModel()
 	trainer.train()
