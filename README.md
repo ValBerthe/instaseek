@@ -1,14 +1,5 @@
 # Instaseek : find your influencers on Instagram
 
-## Setup
-
-- Install [Python 3.6](https://www.python.org/downloads/release/python-360/)
-- `pip install -r requirements.txt` to install Python dependencies
-
-## Docs
-
-You can check out docs [here](https://valberthe.github.io/).
-
 ## Manual
 
 This project aims to detect genuine and organic influencers on Instagram. The model is data-based and uses a machine learning approach :
@@ -16,6 +7,31 @@ This project aims to detect genuine and organic influencers on Instagram. The mo
 - Simple metrics such as followers, following, media count, mean engagement rate, post frequency, etc.
 - Comment quality score: is the audience engaged ?
 - Metrics over the feed images' quality : unity of contrast and colorfulness, redundancy of colors, etc.
+
+## Setup
+
+Clone this repository on your local machine.
+Install [Python 3.6](https://www.python.org/downloads/release/python-360/)
+
+I will later make a pip package out of this project.
+
+### Install dependencies using `pipenv` and Pipfile
+
+- If you haven't installed `pipenv` yet, `pip install pipenv`
+- `pipenv install`
+- If you encounter dependencies conflicts, `pipenv install --skip-lock`
+
+### Install dependencies using `requirements.txt`
+
+- `pip install -r requirements.txt`
+
+### Start classification
+
+- `python src/__init__.py`
+
+## Docs
+
+You can check out docs [here](https://valberthe.github.io/).
 
 ## Script files
 
