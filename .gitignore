@@ -13,3 +13,6 @@ res/bnw.PNG
 res/couleurs.PNG
 src/.pytest_cache/
 doc/
+dist/
+res/
+out/

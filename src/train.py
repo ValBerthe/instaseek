@@ -46,10 +46,9 @@ from sql_client import SqlClient
 ### Setup du PrettyPrinter, ainsi que des chemin d'accès aux fichiers. ###
 pp = pprint.PrettyPrinter(indent = 2)
 
-xl_path = os.path.join(os.path.dirname(__file__), '../res/iguserssample.xlsx')
-model_path = os.path.join(os.path.dirname(__file__), '../models/classifier.model')
-users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
-labels_model_path = os.path.join(os.path.dirname(__file__), '../models/labels.model')
+model_path = os.path.join(os.path.dirname(__file__), './models/classifier.model')
+users_model_path = os.path.join(os.path.dirname(__file__), './models/users_sample.model')
+labels_model_path = os.path.join(os.path.dirname(__file__), './models/labels.model')
 ig_url = 'http://www.instagram.com/'
 
 class Trainer(object):

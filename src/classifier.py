@@ -49,7 +49,7 @@ from sql_client import SqlClient
 pp = pprint.PrettyPrinter(indent = 2)
 classifier = Trainer()
 
-users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
+users_model_path = os.path.join(os.path.dirname(__file__), './models/users_sample.model')
 
 if __name__ == "__main__":
     """

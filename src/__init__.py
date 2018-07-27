@@ -17,15 +17,15 @@ You should have received a copy of the GNU General Public License
 along with Instaseek. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.dirname(__file__))
 
-config_path = os.path.join(os.path.dirname(__file__), './config.ini')
-
 from train import Trainer
 from utils import createConfigFile
+
+config_path = os.path.join(os.path.dirname(__file__), './config.ini')
 
 if __name__ == '__main__':
 

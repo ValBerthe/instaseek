@@ -58,9 +58,9 @@ from utils import get_post_image_url
 
 ### On set les chemins d'accès et le prettyprinter. ###
 pp = pprint.PrettyPrinter(indent=2)
-comments_model_path = os.path.join(os.path.dirname(__file__), '../models/comments.model')
-biographies_model_path = os.path.join(os.path.dirname(__file__), '../models/biographies.model')
-users_model_path = os.path.join(os.path.dirname(__file__), '../models/users_sample.model')
+comments_model_path = os.path.join(os.path.dirname(__file__), './models/comments.model')
+biographies_model_path = os.path.join(os.path.dirname(__file__), './models/biographies.model')
+users_model_path = os.path.join(os.path.dirname(__file__), './models/users_sample.model')
 config_path = os.path.join(os.path.dirname(__file__), './config.ini')
 
 N_CLUSTERS = 3
