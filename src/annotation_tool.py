@@ -50,8 +50,8 @@ def annotate():
 		webbrowser.get(chrome_path).open(user)
 		label = -1
 
-		### On recommence tant que l'utilisateur n'a pas été annoté par 0 ou par 1. ###
-		while label not in ['0', '1']:
+		### On recommence tant que l'utilisateur n'a pas été annoté par 0 ou par 1. -2 correspond à un utilisateur non trouvé. ###
+		while label not in ['0', '1', '-2']:
 			label = input('Label pour cette page ? %s : ' % user)
 
 		### Set le label en base. ###

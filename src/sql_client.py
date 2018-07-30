@@ -944,6 +944,17 @@ class SqlClient(object):
 		print(result)
 		return result
 
+	def deleteUser(self, username):
+		"""
+		Supprime un utilisateur, notamment lorsque l'utilisateur a supprimé son compte ou changé son nom d'utilisateur.
+		"""
+
+		self.cursor.execute('''
+			DELETE FROM public.users as u
+			WHERE u.user_name = '%s'
+		''' % str(username))
+		self.conn.commit()
+
 	def close(self):
 		"""
 		Ferme la connexion.

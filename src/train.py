@@ -120,6 +120,8 @@ class Trainer(object):
 			### Récupère les features via la classe User. ###
 			self.user_model.getUserInfoSQL()
 			item = {
+				'avglikes': self.user_model.avglikes,
+				'avgcomments': self.user_model.avgcomments,
 				'color_distorsion': self.user_model.color_distorsion,
 				'colorfulness_std': self.user_model.colorfulness_std,
 				'contrast_std': self.user_model.contrast_std,
@@ -145,7 +147,7 @@ class Trainer(object):
 				pickle.dump(self.users_array, f)
 
 		### Assignation de la liste des features en tant que liste, et les labels correspondants. ###
-		for user in self.users_array:
+		for user in tqdm(self.users_array):
 			features = list()
 			for key in self.key_features:
 				features.append(user[key])

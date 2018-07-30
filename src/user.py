@@ -971,6 +971,37 @@ class User(object):
 				word = word
 		return word
 
+	def cleanNonExistingUsers(self):
+		"""
+		Supprime les utilisateurs en base qui ont changé de nom/n'existent plus.
+
+				Args:
+					None
+				
+				Returns:
+					None
+		"""
+		self.sqlClient = SqlClient()
+
+		self.sqlClient.openCursor()
+		usernames = self.sqlClient.getUserNames(0)
+		self.sqlClient.closeCursor()
+
+		self.InstagramAPI = InstagramAPI(self.config['Instagram']['user'], self.config['Instagram']['password'])
+		self.InstagramAPI.login()
+
+		for username in tqdm(usernames):
+
+			self.InstagramAPI.searchUsername(username['user_name'])
+			user_server = self.InstagramAPI.LastJson
+
+			if user_server['status'] == 'fail':
+				self.sqlClient.openCursor()
+				self.sqlClient.setLabel(username['user_name'], '-2')
+				self.sqlClient.closeCursor()
+			
+			time.sleep(1)
+
 	def testCommentScore(self):
 		"""
 		Tooling permettant de tester les scores des commentaires utilisateur.
