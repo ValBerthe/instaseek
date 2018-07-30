@@ -79,6 +79,7 @@ class Trainer(object):
 			'color_distorsion',
 			'contrast_std'
 		]
+
 		self.features_array = list()
 		self.labels = list()
 		self.split_ratio = split_ratio
@@ -99,7 +100,11 @@ class Trainer(object):
 
 		### On récupère toutes les features nécessaires pour entraîner le modèle. ###
 		self.user_model = User()
+
+		### `users` est une liste de dictionnaires de type [{user_name: "toto"}, {user_name: "valberthe"}, ...]. ###
+		### `users_array` est une liste de noms d'utilisateurs : ["toto", "valberthe", ...].                     ###
 		users = self.user_model.getUserNames()
+		users_array = [user['user_name'] for user in users]
 
 		### Si le modèle d'utilisateurs existe déjà, on l'ouvre. ###
 		if os.path.isfile(users_model_path):
@@ -115,6 +120,7 @@ class Trainer(object):
 			### Si l'utilisateur se trouve déjà dans le teableau, on n'a pas à réeffectuer le traitement. ###
 			if user['user_name'] in [_user['username'] for _user in self.users_array]:
 				continue
+
 			self.user_model.username = user['user_name']
 
 			### Récupère les features via la classe User. ###
@@ -145,6 +151,8 @@ class Trainer(object):
 			### Sauvegarde du modèle d'utilisateurs. ###
 			with open(users_model_path, 'wb') as f:
 				pickle.dump(self.users_array, f)
+
+		self.users_array = [user for user in self.users_array if user['username'] in users_array]
 
 		### Assignation de la liste des features en tant que liste, et les labels correspondants. ###
 		for user in tqdm(self.users_array):

@@ -690,7 +690,6 @@ class SqlClient(object):
 		bools = [row['test_set'] for row in result]
 		cntr = Counter(bools)
 		ratio = cntr[True] / (cntr[True] + cntr[False])
-		print(ratio)
 		return ratio
 
 	def getUsernameUrls(self, labeled = True, randomized = True, sponsored_only = True):
