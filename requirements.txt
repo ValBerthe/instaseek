@@ -12,3 +12,4 @@ regex>=2018.7.11
 tqdm>=4.11.2
 numpy>=1.15.0
 pip@ https://github.com/ValBerthe/Instagram-API-python/tarball/master
+requests>=2.19.1
