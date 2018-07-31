@@ -106,7 +106,13 @@ class User(object):
 
 	def getUserNames(self, limit = 0):
 		"""
-		Récupère les usernames des utilisateurs annotés.
+		Récupère les usernames des utilisateurs annotés, sous la forme:
+
+		[
+			{"username": "foo"},
+			{"username": "bar"},
+			...
+		]
 
 		Args:
 				limit (int) : La limite du nombre d'utilisateurs à retourner.
@@ -116,6 +122,7 @@ class User(object):
 		"""
 		self.sqlClient = SqlClient()
 
+		### Récupération des noms d'utilisateurs annotés. ###
 		self.sqlClient.openCursor()
 		allUsers = self.sqlClient.getUserNames(limit, labeled=True)
 		self.sqlClient.closeCursor()
@@ -161,203 +168,175 @@ class User(object):
 		### Charge le modèle de biographies. ###
 		self.count_vect, self.tfidf_transformer, self.clf = pickle.load(open(biographies_model_path, 'rb'))
 
-		try:
-			username = self.username
+		username = self.username
 
-			### On initialise le temps de départ pour mesurer le temps d'exécution global. ###
-			time_temp_start = time.time()
+		### On initialise le temps de départ pour mesurer le temps d'exécution global. ###
+		time_temp_start = time.time()
 
-			### On questionne l'API à propos du nom d'utilisateur, cela nous retourne l'utilisateur en entier. ###
-			self.InstagramAPI.searchUsername(username)
-			user_server = self.InstagramAPI.LastJson['user']
+		### On questionne l'API à propos du nom d'utilisateur, cela nous retourne l'utilisateur en entier. ###
+		self.InstagramAPI.searchUsername(username)
+		user_server = self.InstagramAPI.LastJson['user']
 
-			### On récupère le feed entier de l'utilisateur, afin d'analyser certaines métriques. ###
-			self.InstagramAPI.getUserFeed(user_server['pk'])
-			feed = self.InstagramAPI.LastJson['items']
+		### On récupère le feed entier de l'utilisateur, afin d'analyser certaines métriques. ###
+		self.InstagramAPI.getUserFeed(user_server['pk'])
+		feed = self.InstagramAPI.LastJson['items']
 
-			### On initialise les listes utiles pour l'étude. ###
-			rates = list()
-			timestamps = list()
-			comment_scores = list()
-			brpscs = list()
-			colorfulness_list = list()
-			dominant_colors_list = list()
-			contrast_list = list()
-			avglikes = list()
-			avgcomments = list()
+		### On initialise les listes utiles pour l'étude. ###
+		rates = list()
+		timestamps = list()
+		comment_scores = list()
+		brpscs = list()
+		colorfulness_list = list()
+		dominant_colors_list = list()
+		contrast_list = list()
+		avglikes = list()
+		avgcomments = list()
 
-			### On affiche la longueur du feed retourné par l'API. ###
-			print('Feed is %s post-long' % str(len(feed)))
+		### On affiche la longueur du feed retourné par l'API. ###
+		print('Feed is %s post-long' % str(len(feed)))
 
-			### On boucle sur le feed afin d'en extraire les données pertinentes pour le calcul de nos features. 					  ###
-			### On prend 50 posts du feed pour ne pas avoir un temps d'éxécution trop long. 										  ###
-			### TODO: demander à l'API de ne pas récupérer l'intégralité des posts de l'utilisateur, mais simplement les 50 premiers. ###
-			for index, post in enumerate(feed):
+		### On boucle sur le feed afin d'en extraire les données pertinentes pour le calcul de nos features. 					  ###
+		### On prend 50 posts du feed pour ne pas avoir un temps d'éxécution trop long. 										  ###
+		### TODO: demander à l'API de ne pas récupérer l'intégralité des posts de l'utilisateur, mais simplement les 50 premiers. ###
+		for index, post in enumerate(feed):
 
-				### On affiche l'état de progression de l'analyse. ###
-				print('Post %s/%s...' %
-					  (index + 1, len(feed[:50])), end='\r', flush=True)
+			### On affiche l'état de progression de l'analyse. ###
+			print('Post %s/%s...' %
+					(index + 1, len(feed[:50])), end='\r', flush=True)
 
-				### Si le serveur renvoie une erreur (notamment 503), on attend 1 minute avant de renvoyer une requête. ###
-				try:
+			### Si le serveur renvoie une erreur (notamment 503), on attend 1 minute avant de renvoyer une requête. ###
+			### Ajout du nombre de likes et de commentaires pour moyenner sur le feed. ###
+			avglikes.append(post['like_count'])
+			avgcomments.append(post['comment_count'])
 
-					### Ajout du nombre de likes et de commentaires pour moyenner sur le feed. ###
-					avglikes.append(post['like_count'])
-					avgcomments.append(post['comment_count'])
+			### On ajoute le timestamp du post pour les analyses de fréquence. ###
+			timestamps.append(int(post['taken_at']))
 
-					### On ajoute le timestamp du post pour les analyses de fréquence. ###
-					timestamps.append(int(post['taken_at']))
+			### Si l'utilisateur n'a pas de followers, on considère que le taux d'engagement est 0 (au lieu d'infini). ###
+			if user_server['follower_count'] == 0:
+				engagement_rate = 0
 
-					### Si l'utilisateur n'a pas de followers, on considère que le taux d'engagement est 0 (au lieu d'infini). ###
-					if user_server['follower_count'] == 0:
+			else:
+				### Pourcentage du taux d'engagement. ###
+				k = 100 / user_server['follower_count']
+
+				### On distingue plusieurs cas: celui où il y a commentaires et likes, celui où il en manque un des deux, et celui où il n'y a rien. ###
+				if 'like_count' in post:
+					if 'comment_count' in post:
+						engagement_rate = (
+							int(post['like_count']) + int(post['comment_count'])) * k
+					else:
+						engagement_rate = int(post['like_count']) * k
+
+				else:
+					if 'comment_count' in post:
+						engagement_rate = int(
+							post['comment_count']) * k
+					else:
 						engagement_rate = 0
 
-					else:
-						### Pourcentage du taux d'engagement. ###
-						k = 100 / user_server['follower_count']
+			### On ajoute le taux d'engagement du post à la liste de taux d'engagement. ###
+			rates.append(engagement_rate)
 
-						### On distingue plusieurs cas: celui où il y a commentaires et likes, celui où il en manque un des deux, et celui où il n'y a rien. ###
-						if 'like_count' in post:
-							if 'comment_count' in post:
-								engagement_rate = (
-									int(post['like_count']) + int(post['comment_count'])) * k
-							else:
-								engagement_rate = int(post['like_count']) * k
+			### On récupère le code binaire des images en BDD, et on y opère les traitements : ###
+			### - STD du contraste															   ###
+			### - STD de l'intensité colorimétrique											   ###
+			### - Distorsion des clusters de couleur										   ###
 
-						else:
-							if 'comment_count' in post:
-								engagement_rate = int(
-									post['comment_count']) * k
-							else:
-								engagement_rate = 0
+			### Depuis le JSON de réponse de l'API, on récupère l'adresse URL de la plus petite image. ###
+			url = get_post_image_url(post)
 
-					### On ajoute le taux d'engagement du post à la liste de taux d'engagement. ###
-					rates.append(engagement_rate)
+			### On fait une requête HTTP.GET sur l'adresse récupérée, puis on entrait les octets de l'image en réponse. ###
+			response = requests.get(url)
+			img = Image.open(BytesIO(response.content))
 
-					### On récupère le code binaire des images en BDD, et on y opère les traitements : ###
-					### - STD du contraste															   ###
-					### - STD de l'intensité colorimétrique											   ###
-					### - Distorsion des clusters de couleur										   ###
-					try:
-						### Depuis le JSON de réponse de l'API, on récupère l'adresse URL de la plus petite image. ###
-						url = get_post_image_url(post)
+			### On convertit l'image en N&B pour l'étude du contraste. ###
+			grayscale_img = img.convert('LA')
 
-						### On fait une requête HTTP.GET sur l'adresse récupérée, puis on entrait les octets de l'image en réponse. ###
-						response = requests.get(url)
-						img = Image.open(BytesIO(response.content))
+			### On ajoute la couleur dominante du post pour une analyse colorimétrique. ###
+			most_dominant_colour = self.getMostDominantColour(img)
+			dominant_colors_list.append(most_dominant_colour)
 
-						### On convertit l'image en N&B pour l'étude du contraste. ###
-						grayscale_img = img.convert('LA')
+			### On récupère le taux de colorité de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
+			colorfulness = self.getImageColorfulness(img)
+			colorfulness_list.append(colorfulness)
 
-						### On ajoute la couleur dominante du post pour une analyse colorimétrique. ###
-						most_dominant_colour = self.getMostDominantColour(img)
-						dominant_colors_list.append(most_dominant_colour)
+			### On récupère le taux de contraste de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
+			contrast = self.getContrast(grayscale_img)
+			if not math.isnan(contrast):
+					contrast_list.append(contrast)
 
-						### On récupère le taux de colorité de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
-						colorfulness = self.getImageColorfulness(img)
-						colorfulness_list.append(colorfulness)
 
-						### On récupère le taux de contraste de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
-						contrast = self.getContrast(grayscale_img)
-						if not math.isnan(contrast):
-							contrast_list.append(contrast)
-					except Exception as e:
-						print('Error while getting image info (user.py): %s' % e)
+			### Fetch les marques détectées dans les posts. ###
+			brpsc = self.getBrandPresence(post)
+			if brpsc:
+				brpscs.extend(brpsc)
 
-					### Fetch les marques détectées dans les posts. ###
-					brpsc = self.getBrandPresence(post)
-					if brpsc:
-						brpscs.extend(brpsc)
+			### On récupère le score de commentaires sur tout le feed de l'utilisateur. ###
+			self.InstagramAPI.getMediaComments(str(post['id']))
+			comments_server = self.InstagramAPI.LastJson
 
-					### On récupère le score de commentaires sur tout le feed de l'utilisateur. ###
-					self.InstagramAPI.getMediaComments(str(post['id']))
-					comments_server = self.InstagramAPI.LastJson
+			#time.sleep(1)
 
-					#time.sleep(1)
+			### On cherche tous les commentaires retournés dans la variable `comments_server`. ###
+			if 'comments' in comments_server:
 
-					### On cherche tous les commentaires retournés dans la variable `comments_server`. ###
-					if 'comments' in comments_server:
+					for comment in comments_server['comments']:
+						### On ne prend que les 10 premier commentaires pour chaque post. ###
+						if len(comment_scores) > 10:
+							break
 
-						for comment in comments_server['comments']:
-							### On ne prend que les 10 premier commentaires pour chaque post. ###
-							if len(comment_scores) > 10:
-								break
+						### Si la personne qui commente est l'auteur du post, alors on ignore le commentaire. ###
+						if comment['user']['username'] == self.username:
+							continue
 
-							### Si la personne qui commente est l'auteur du post, alors on ignore le commentaire. ###
-							if comment['user']['username'] == self.username:
-								continue
+						score = self.getCommentScore(comment['text'])
+						comment_scores.append(score)
 
-							score = self.getCommentScore(comment['text'])
-							comment_scores.append(score)
+						#time.sleep(1)
 
-							#time.sleep(1)
+		### Assignation des critères et affichage des résultats. ###
+		if len(rates) > 0:
+			avg = mean(rates)
+			self.lastpost = time.time() - max(timestamps)
+			self.frequency = self.calculateFrequency(len(feed), min(timestamps))
+			self.engagement = avg
+			self.avglikes = mean(avglikes) if len(avglikes) > 1 else 0
+			self.avgcomments = mean(avgcomments) if len(avgcomments) > 1 else 0
+			self.followings = int(user_server['following_count'])
+			self.followers = int(user_server['follower_count'])
+			self.usermentions = int(user_server['usertags_count'])
+			self.nmedias = int(user_server['media_count'])
+			self.brandpresence = brpscs
+			self.brandtypes = self.getBrandTypes(brpscs)
+			self.commentscore = mean(comment_scores) * (1 + stdev(comment_scores)) if len(comment_scores) > 1 else 0
+			self.biographyscore = self.getBiographyScore(user_server['biography'])
+			self.colorfulness_std = stdev(colorfulness_list) if len(colorfulness_list) > 1 else 0
+			self.contrast_std = stdev(contrast_list) if len(contrast_list) > 1 else 0
+			self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in dominant_colors_list]
+			self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
+			self.colors_dispersion = self.calcCentroid3d(self.colors)
 
-				except Exception as e:
-					### Si on a une erreur, on attend une minute avant de recommencer l'opération. ###
-					j = 0
-					while j < 4:
-						for i in range(60):
-							print('Something went wrong while getting post info:\n%s\nWaiting %s seconds before requesting server again.' % (
-								e, (60 - i)), end='\r', flush=True)
-							time.sleep(1)
-						j += 1
-						self.getUserInfoIG()
-					pass
+			print('Username : %s' % self.username)
+			print('Last post: %s' % self.uiGetIlya(max(timestamps)))
+			print('Frequency: %.2f' % float(self.frequency))
+			print('Engagement: %.2f%%' % float(self.engagement))
+			print('Average like count: %.2f' % float(self.avglikes))
+			print('Average comment count: %.2f' % float(self.avgcomments))
+			print('N followings: %s' % self.uiFormatInt(self.followings))
+			print('N followers: %s' % self.uiFormatInt(self.followers))
+			print('User mentions: %s' %self.uiFormatInt(self.usermentions))
+			print('Brand presence: %s' % str(self.brandpresence))
+			print('Brand types: %s' % str(self.brandtypes))
+			print('Biography score: %s' % str(self.biographyscore))
+			print('Comments score: %s' % str(self.commentscore))
+			print('Colorfulness standard deviation: %s' % self.colorfulness_std)
+			print('Contrast standard deviation: %s' % self.contrast_std)
+			print('Overall color distorsion : %s' % str(self.color_distorsion))
+			print('\nFeature extraction ended in %.2fs seconds' % (float(time.time() - time_temp_start)))
 
-			### Assignation des critères et affichage des résultats. ###
-			if len(rates) > 0:
-				avg = mean(rates)
-				self.lastpost = time.time() - max(timestamps)
-				self.frequency = self.calculateFrequency(
-					len(feed), min(timestamps))
-				self.engagement = avg
-				self.avglikes = mean(avglikes)
-				self.avgcomments = mean(avgcomments)
-				self.followings = int(user_server['following_count'])
-				self.followers = int(user_server['follower_count'])
-				self.usermentions = int(user_server['usertags_count'])
-				self.nmedias = int(user_server['media_count'])
-				self.brandpresence = brpscs
-				self.brandtypes = self.getBrandTypes(brpscs)
-				self.commentscore = mean(comment_scores) * (1 + stdev(comment_scores))
-				self.biographyscore = self.getBiographyScore(user_server['biography'])
-				self.colorfulness_std = stdev(colorfulness_list) if len(
-					colorfulness_list) > 1 else 0
-				self.contrast_std = stdev(contrast_list) if len(
-					contrast_list) > 1 else 0
-				self.colors = [[color.lab_l, color.lab_a, color.lab_b]
-							   for color in dominant_colors_list]
-				self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(
-					np.array(self.colors), self.n_clusters)
-				self.colors_dispersion = self.calcCentroid3d(self.colors)
-
-				print('Username : %s' % self.username)
-				print('Last post: %s' % self.uiGetIlya(max(timestamps)))
-				print('Frequency: %.2f' % float(self.frequency))
-				print('Engagement: %.2f%%' % float(self.engagement))
-				print('Average like count: %.2f%%' % float(self.avglikes))
-				print('Average comment count: %.2f%%' % float(self.avgcomments))
-				print('N followings: %s' % self.uiFormatInt(self.followings))
-				print('N followers: %s' % self.uiFormatInt(self.followers))
-				print('User mentions: %s' %
-					  self.uiFormatInt(self.usermentions))
-				print('Brand presence: %s' % str(self.brandpresence))
-				print('Brand types: %s' % str(self.brandtypes))
-				print('Biography score: %s' % str(self.biographyscore))
-				print('Comments score: %s' % str(self.commentscore))
-				print('Colorfulness standard deviation: %s' %
-					  self.colorfulness_std)
-				print('Contrast standard deviation: %s' % self.contrast_std)
-				print('Overall color distorsion : %s' %
-					  str(self.color_distorsion))
-				print('\nFeature extraction ended in %.2fs seconds' %
-					  (float(time.time() - time_temp_start)))
-			else:
-				print('This user has no posts !')
-
-		except Exception as e:
-			print(e)
-			pass
+		else:
+			print('This user has no posts !')
 
 	def getUserInfoSQL(self):
 		"""
@@ -503,8 +482,8 @@ class User(object):
 		if len(rates) > 1:
 			avg = mean(rates)
 			self.engagement = avg
-			self.avglikes = mean(avglikes)
-			self.avgcomments = mean(avgcomments)
+			self.avglikes = mean(avglikes) if len(avglikes) > 1 else 0
+			self.avgcomments = mean(avgcomments) if len(avgcomments) > 1 else 0
 			self.lastpost = time.time() - max(timestamps)
 			self.frequency = self.calculateFrequency(len(posts), min(timestamps))
 			self.followings = int(posts[0]['n_following'])
