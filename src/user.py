@@ -333,16 +333,6 @@ class User(object):
 		### Parfois, on peut avoir que une ou deux couleurs outputées du k-mean.                            ###
 		### Si on a une erreur, on baisse le nombre de clusters jusqu'à ce que le k-mean puisse être opéré. ###
 
-		while True:
-			try:
-				if (self.n_clusters == 0):
-					break
-				self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(
-					np.array(self.colors), self.n_clusters)
-			except Exception as e:
-				self.n_clusters = self.n_clusters - 1
-				continue
-			break
 		self.label = int(post['label'])
 		self.testset = post['test_set']
 
@@ -505,8 +495,17 @@ class User(object):
 		self.colorfulness_std = stdev(self.colorfulness_list) if len(self.colorfulness_list) > 1 else 0
 		self.contrast_std = stdev(self.contrast_list) if len(self.contrast_list) > 1 else 0
 		self.colors = [[color.lab_l, color.lab_a, color.lab_b] for color in self.dominant_colors_list]
-		self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
 		self.colors_dispersion = self.calcCentroid3d(self.colors)
+
+		while True:
+			try:
+				if (self.n_clusters == 0):
+					break
+				self.codes, self.color_distorsion = scipy.cluster.vq.kmeans(np.array(self.colors), self.n_clusters)
+			except Exception as e:
+				self.n_clusters = self.n_clusters - 1
+				continue
+			break
 
 	def printFeatures(self):
 		"""

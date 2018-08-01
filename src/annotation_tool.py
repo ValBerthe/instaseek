@@ -30,6 +30,8 @@ sys.path.append(os.path.dirname(__file__))
 ### Custom libs. ###
 from sql_client import SqlClient
 
+ACCEPTED_VALUES = ['0', '1', '-2']
+
 def annotate():
 	sys.path.append(os.path.dirname(__file__))
 	chrome_path = 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s'
@@ -44,19 +46,39 @@ def annotate():
 	print('Fetched %s users.' % str(len(users)))
 	sqlClient.closeCursor()
 
-	for user in users:
+	for index, user in enumerate(users):
 
 		### Ouvre un nouvel onglet, sur la page Instagram de l'utilisateur à annoter. ###
 		webbrowser.get(chrome_path).open(user)
 		label = -1
 
+		username = user.split(insta_path)[1]
+
 		### On recommence tant que l'utilisateur n'a pas été annoté par 0 ou par 1. -2 correspond à un utilisateur non trouvé. ###
-		while label not in ['0', '1', '-2']:
-			label = input('Label pour cette page ? %s : ' % user)
+		while label not in ACCEPTED_VALUES:
+			label = input('%s. %s : ' % (str(index), user))
+
+			### Si on a fait une erreur et que l'on veur revenir en arrière. ###
+			if label == 'previous':
+				if index > 0:
+					### Ouvre de nouveau la page précédente. ###
+					webbrowser.get(chrome_path).open(users[index - 1])
+
+					labelprevious = -1
+					while labelprevious not in ACCEPTED_VALUES:
+						labelprevious = input('%s. %s : ' % (str(index - 1), users[index - 1]))
+					### Set le label en base. ###
+					sqlClient.openCursor()
+					sqlClient.setLabel(users[index - 1].split(insta_path)[1], labelprevious)
+					sqlClient.closeCursor()
+				else:
+					print('Cannot go previous first user.')
+
+			### Réouvre la page courante. ###		
+			webbrowser.get(chrome_path).open(user)
 
 		### Set le label en base. ###
 		sqlClient.openCursor()
-		username = user.split(insta_path)[1]
 		sqlClient.setLabel(username, label)
 		sqlClient.closeCursor()
 
