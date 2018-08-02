@@ -681,8 +681,13 @@ class SqlClient(object):
 		Retourne le ratio de la taille du jeu de données avec 
 		"""
 		self.cursor.execute('''
-			SELECT test_set FROM users AS u
+			SELECT u.user_name, u.test_set FROM public.users AS u
+			INNER JOIN public.posts AS p
+			ON p.user_id = u.id_user
+			INNER JOIN public.images AS i
+			ON i.post_id = p.id_post
 			WHERE u.label > -1
+			GROUP BY u.user_name, u.test_set
 		''')
 		values = self.cursor.fetchall()
 		keys = [desc[0] for desc in self.cursor.description]

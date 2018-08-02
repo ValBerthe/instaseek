@@ -24,10 +24,12 @@ import pickle
 import random
 import argparse
 import math
+from itertools import chain
 
 ### Installed libs. ###
 import pprint
 import pandas as pd
+from sklearn.feature_extraction import DictVectorizer
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -50,6 +52,7 @@ pp = pprint.PrettyPrinter(indent = 2)
 model_path = os.path.join(os.path.dirname(__file__), './models/classifier.model')
 users_model_path = os.path.join(os.path.dirname(__file__), './models/users_sample.model')
 labels_model_path = os.path.join(os.path.dirname(__file__), './models/labels.model')
+dictvec_model_path = os.path.join(os.path.dirname(__file__), './models/dictvec.model')
 ig_url = 'http://www.instagram.com/'
 
 class Trainer(object):
@@ -57,7 +60,7 @@ class Trainer(object):
 	Classe d'entraînement du modèle de détection des influenceurs.
 	"""
 
-	def __init__(self, split_ratio = 0.8):
+	def __init__(self):
 		"""
 		__init__ function. On définit aussi les features que l'on va utiliser pour l'étude.
 		"""
@@ -71,18 +74,18 @@ class Trainer(object):
 			'engagement',
 			'followers',
 			'followings',
-			'nmedias',
+			#'nmedias',
 			'frequency',
-			#'lastpost',
 			'usermentions',
 			'colorfulness_std',
 			'color_distorsion',
 			'contrast_std'
 		]
 
-		self.features_array = list()
-		self.labels = list()
-		self.split_ratio = split_ratio
+		self.features_array_train = list()
+		self.features_array_test = list()
+		self.labels_train = list()
+		self.labels_test = list()
 		self.users_array = list()
 
 	def buildUsersModel(self):
@@ -104,15 +107,14 @@ class Trainer(object):
 		### `users` est une liste de dictionnaires de type [{user_name: "toto"}, {user_name: "valberthe"}, ...]. ###
 		### `users_array` est une liste de noms d'utilisateurs : ["toto", "valberthe", ...].                     ###
 		users = self.user_model.getUserNames()
+		print('USERS LENGTH')
+		print(len(users))
 		users_array = [user['user_name'] for user in users]
 
 		### Si le modèle d'utilisateurs existe déjà, on l'ouvre. ###
 		if os.path.isfile(users_model_path):
 			with open(users_model_path, 'rb') as f:
 				self.users_array = pickle.load(f)
-		
-		### Index du split. ###
-		self.n_split = math.floor(self.split_ratio * len(self.users_array)) + 1
 
 		### On parcourt le tableau des utilisateurs pour leur assigner les features. ###
 		for user in tqdm(users):
@@ -154,17 +156,30 @@ class Trainer(object):
 
 		self.users_array = [user for user in self.users_array if user['username'] in users_array]
 
-		### Assignation de la liste des features en tant que liste, et les labels correspondants. ###
-		for user in tqdm(self.users_array):
-			features = list()
-			for key in self.key_features:
-				features.append(user[key])
-			self.features_array.append(features)
-			self.labels.append(user['label'])
-		
-		### On mélange les résultats pour ne pas avoir toujours les mêmes répartitions coup sur coup. ###
-		self.features_array, self.labels, self.users_array = shuffle(self.features_array, self.labels, self.users_array, random_state = 0)
+		features_dict = [{key: user[key] for key in self.key_features} for user in self.users_array]
 
+		### Assignation de la liste des features en tant que liste, et les labels correspondants. ###
+		self.dictvec = DictVectorizer()
+		self.dictvec.fit(features_dict)
+
+		### Sauvegarde le modèle du vectorisateur de dico. ###
+		with open(dictvec_model_path, 'wb') as f:
+			pickle.dump(self.dictvec, f)
+
+		for user in self.users_array:
+
+			### On n'a pas besoin de filtrer de nouveau les champs ici: le DictVec s'en charge! ###
+			### S'il ne connait pas un champ, il l'ignore. 									    ###
+			features_list = self.dictvec.transform(user).toarray().flatten()
+
+			if user['testset']:
+				self.features_array_test.append(features_list)
+				self.labels_test.append(user['label'])
+
+			else:
+				self.features_array_train.append(features_list)
+				self.labels_train.append(user['label'])
+		
 	def alterUsersModel(self):
 		"""
 		Au lieu de reconstruire le modèle d'utilisateurs à chaque fois, on change juste un champ pour des modifications occasionnelles.
@@ -210,40 +225,44 @@ class Trainer(object):
 		"""
 
 		### Définition du classifieur de type Random Forest à 500 estimateurs. ###
-		clf = RandomForestClassifier(n_estimators = 500)
+		self.clf = RandomForestClassifier(n_estimators = 500)
 
 		### On entraîne le classifieur avec le set d'entraînement (jusqu'à l'index n_split). ###
-		clf.fit(self.features_array[:self.n_split], self.labels[:self.n_split])
+		self.clf.fit(self.features_array_train, self.labels_train)
 
 		### On peut avoir l'importance des features dans la décision de la classification. ###
-		importance = clf.feature_importances_
+		importance = self.clf.feature_importances_
 
 		### Score de la classification. ###
-		scores = cross_val_score(clf, self.features_array, self.labels, cv = 5)
-		print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+		scores = cross_val_score(
+			self.clf,
+			self.features_array_train + self.features_array_test,
+			self.labels_train + self.labels_test,
+			cv = 5
+		)
+		print("\nAccuracy: %0.2f (+/- %0.2f)\n" % (scores.mean(), scores.std() * 2))
 
 		### On calcule une prédiction pour la matrice de confusion et le rapport de classification. ###
-		pred = clf.predict(self.features_array[self.n_split:])
-		print('\n%s\n' % str(pred))
-		print(confusion_matrix(self.labels[self.n_split:], pred))
+		pred = self.clf.predict(self.features_array_test)
+		print(confusion_matrix(self.labels_test, pred))
 		print('\n')
 
 		### On affiche l'importance des critères de classification. ###
-		for couple in zip(self.key_features, importance):
-			print('________ %s' % str((couple[0], '%.2f%%' % float(100 * couple[1]))))
+		for couple in zip(self.dictvec.get_feature_names(), importance):
+			print('    %s: %s' % (str(couple[0]), '%.2f%%' % float(100 * couple[1])))
 		print('\n')
 
-		print(classification_report(self.labels[self.n_split:], pred))
+		print(classification_report(self.labels_test, pred))
 
 		### Affichage des faux positifs et faux négatifs pour observer quels influenceurs sont mal détectés. ###
 		#self.displayFPFN(pred)
 
 		### Génération des probabilités (et non du vote à majorité) du Random Forest
-		y_score = clf.predict_proba(self.features_array[self.n_split:])
+		y_score = self.clf.predict_proba(self.features_array_test)
 		pred2 = [predclass[1] for predclass in y_score]
 
 		### Construction de la courbe ROC. ###
-		fpr, tpr, _ = roc_curve(self.labels[self.n_split:], pred2)
+		fpr, tpr, _ = roc_curve(self.labels_test, pred2)
 		### Aire sous la courbe. ###
 		roc_auc = auc(fpr, tpr)
 
@@ -262,7 +281,7 @@ class Trainer(object):
 
 		### Sauvegarde le classifieur en tant que modèle. ###
 		with open(model_path, 'wb') as __f:
-			pickle.dump(clf, __f)
+			pickle.dump(self.clf, __f)
 		
 	def displayFPFN(self, preds):
 		"""
@@ -306,7 +325,11 @@ class Trainer(object):
 
 		### Ouvre le modèle de classification. ###
 		with open(model_path, 'rb') as f:
-			clf = pickle.load(f)
+			self.clf = pickle.load(f)
+		
+		### Ouvre le modèle DictVec. ###
+		with open(dictvec_model_path, 'rb') as f:
+			self.dictvec = pickle.load(f)
 
 			### L'utilisateur entre un nom de profil Instagram afin d'utiliser le modèle de classification, et estimer si cette personne est un influenceur ou non. ###
 			while True:
@@ -314,26 +337,14 @@ class Trainer(object):
 				user = User()
 				user.username = username
 				user.getUserInfoIG()
+
 				try:
-					vector = [[
-						#user.biographyscore, 
-						user.commentscore,
-						user.avglikes,
-						user.avgcomments,
-						user.engagement,
-						user.followers,
-						user.followings,
-						user.nmedias,
-						user.lastpost,
-						user.usermentions,
-						user.colorfulness_std,
-						user.color_distorsion,
-						user.contrast_std
-					]]
+					features_dict = {key: user.__dict__[key] for key in self.key_features}
+					features_array = self.dictvec.transform(features_dict)
 
 					### Prédiction. ###
-					pred = clf.predict(vector)
-					y_score = clf.predict_proba(vector)
+					pred = self.clf.predict(features_array)
+					y_score = self.clf.predict_proba(features_array)
 					print('Result:\n\n%s\nScore: %s\n' % ('Influencer !' if pred == 1 else 'Not an influencer.', str(y_score[0][1] * 100) + '%'))
 				
 				except Exception as e:

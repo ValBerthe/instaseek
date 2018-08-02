@@ -74,8 +74,8 @@ def annotate():
 				else:
 					print('Cannot go previous first user.')
 
-			### Réouvre la page courante. ###		
-			webbrowser.get(chrome_path).open(user)
+				### Réouvre la page courante. ###		
+				webbrowser.get(chrome_path).open(user)
 
 		### Set le label en base. ###
 		sqlClient.openCursor()
@@ -83,7 +83,9 @@ def annotate():
 		sqlClient.closeCursor()
 
 		sqlClient.openCursor()
-		if sqlClient.getTestRatio() < 0.25:
+		testRatio = sqlClient.getTestRatio()
+		print(testRatio)
+		if testRatio < 0.25:
 			sqlClient.setTest(username, True)
 		sqlClient.closeCursor()
 
