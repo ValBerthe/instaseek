@@ -74,12 +74,14 @@ class Trainer(object):
 			'engagement',
 			'followers',
 			'followings',
-			#'nmedias',
+			'nmedias',
 			'frequency',
 			'usermentions',
 			'colorfulness_std',
 			'color_distorsion',
-			'contrast_std'
+			'contrast_std',
+			'category',
+			'is_verified'
 		]
 
 		self.features_array_train = list()
@@ -107,8 +109,7 @@ class Trainer(object):
 		### `users` est une liste de dictionnaires de type [{user_name: "toto"}, {user_name: "valberthe"}, ...]. ###
 		### `users_array` est une liste de noms d'utilisateurs : ["toto", "valberthe", ...].                     ###
 		users = self.user_model.getUserNames()
-		print('USERS LENGTH')
-		print(len(users))
+
 		users_array = [user['user_name'] for user in users]
 
 		### Si le modèle d'utilisateurs existe déjà, on l'ouvre. ###
@@ -130,6 +131,7 @@ class Trainer(object):
 			item = {
 				'avglikes': self.user_model.avglikes,
 				'avgcomments': self.user_model.avgcomments,
+				'category': self.user_model.category,
 				'color_distorsion': self.user_model.color_distorsion,
 				'colorfulness_std': self.user_model.colorfulness_std,
 				'contrast_std': self.user_model.contrast_std,
@@ -145,8 +147,9 @@ class Trainer(object):
 				'brandtypes': self.user_model.brandtypes,
 				'commentscore': self.user_model.commentscore,
 				'biographyscore': self.user_model.biographyscore,
+				'is_verified': self.user_model.is_verified,
 				'label': self.user_model.label,
-				'testset': self.user_model.testset
+				'testset': self.user_model.testset,
 			}
 			self.users_array.append(item)
 
@@ -203,11 +206,10 @@ class Trainer(object):
 		for user in tqdm(users_array):
 			
 			self.sqlClient.openCursor()
-			posts = self.sqlClient.getUserPosts(user['username'])
+			userserver = self.sqlClient.getUser(user['username'])
 			self.sqlClient.closeCursor()
 
-			user['avglikes'] = sum([post['n_likes'] for post in posts]) / len(posts)
-			user['avgcomments'] = sum([post['n_comments'] for post in posts]) / len(posts)
+			user['is_verified'] = userserver['is_verified']
 			adjusted_users.append(user)
 			
 		with open(users_model_path, 'wb') as f:
@@ -248,8 +250,15 @@ class Trainer(object):
 		print('\n')
 
 		### On affiche l'importance des critères de classification. ###
+		categories_total = 0
 		for couple in zip(self.dictvec.get_feature_names(), importance):
+			### Malheureusement lorsqu'on boucle là dessus on a l'importance de chaque type de catégories... ###
+			### Pour n'afficher que les catégories au global, on fait un test sur les features names.        ###
+			if 'category=' in couple[0]:
+				categories_total += couple[1]
+				continue
 			print('    %s: %s' % (str(couple[0]), '%.2f%%' % float(100 * couple[1])))
+		print('    %s: %s' % ('category', '%.2f%%' % float(100 * categories_total)))
 		print('\n')
 
 		print(classification_report(self.labels_test, pred))
@@ -345,9 +354,10 @@ class Trainer(object):
 					### Prédiction. ###
 					pred = self.clf.predict(features_array)
 					y_score = self.clf.predict_proba(features_array)
-					print('Result:\n\n%s\nScore: %s\n' % ('Influencer !' if pred == 1 else 'Not an influencer.', str(y_score[0][1] * 100) + '%'))
+					print('Result:\n\n%s\nScore: %.2f%%\n' % ('Influencer !' if pred == 1 else 'Not an influencer.', float(y_score[0][1] * 100)))
 				
 				except Exception as e:
+					print(e)
 					print('The user doesn\'t exist or has a private account. Please try again.')
 					pass
 

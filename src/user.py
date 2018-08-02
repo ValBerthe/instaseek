@@ -167,6 +167,11 @@ class User(object):
 		self.usermentions = int(user_server['usertags_count'])
 		self.nmedias = int(user_server['media_count'])
 		self.biography = str(user_server['biography'])
+		if 'category' in user_server:
+			self.category = str(user_server['category'])
+		else:
+			self.category = ''
+		self.is_verified = str(user_server['is_verified'])
 
 		### On récupère le feed entier de l'utilisateur, afin d'analyser certaines métriques. ###
 		self.InstagramAPI.getUserFeed(user_server['pk'])
@@ -208,7 +213,7 @@ class User(object):
 
 			### On fait une requête HTTP.GET sur l'adresse récupérée, puis on entrait les octets de l'image en réponse. ###
 			response = requests.get(url)
-			self.imageAnalysis(response)
+			self.imageAnalysis(response.content)
 
 			##############
 			### BRANDS ###
@@ -274,6 +279,9 @@ class User(object):
 		self.usermentions = int(posts[0]['n_usertags'])
 		self.nmedias = int(posts[0]['n_media'])
 		self.biography = str(posts[0]['biography'])
+		self.category = str(posts[0]['category'])
+		self.is_verified = posts[0]['is_verified']
+
 		self.feed = posts
 
 		for post in posts:
@@ -519,6 +527,8 @@ class User(object):
 		"""
 
 		print('Username : %s' % self.username)
+		print('Is verified: %s' % str(self.is_verified))
+		print('Category: %s' % str(self.category))
 		print('N media: %s' % str(self.nmedias))
 		print('Last post: %s' % self.uiGetIlya(max(self.timestamps)))
 		print('Frequency: %.2f' % float(self.frequency))
