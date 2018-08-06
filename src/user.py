@@ -444,24 +444,26 @@ class User(object):
 					None
 		"""
 
-		
-		img = Image.open(BytesIO(imageIO))
+		try:
+			img = Image.open(BytesIO(imageIO))
 
-		### On convertit l'image en N&B pour l'étude du contraste. ###
-		grayscale_img = img.convert('LA')
+			### On convertit l'image en N&B pour l'étude du contraste. ###
+			grayscale_img = img.convert('LA')
 
-		### On ajoute la couleur dominante du post pour une analyse colorimétrique. ###
-		most_dominant_colour = self.getMostDominantColour(img)
-		self.dominant_colors_list.append(most_dominant_colour)
+			### On ajoute la couleur dominante du post pour une analyse colorimétrique. ###
+			most_dominant_colour = self.getMostDominantColour(img)
+			self.dominant_colors_list.append(most_dominant_colour)
 
-		### On récupère le taux de colorité de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
-		colorfulness = self.getImageColorfulness(img)
-		self.colorfulness_list.append(colorfulness)
+			### On récupère le taux de colorité de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
+			colorfulness = self.getImageColorfulness(img)
+			self.colorfulness_list.append(colorfulness)
 
-		### On récupère le taux de contraste de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
-		contrast = self.getContrast(grayscale_img)
-		if not math.isnan(contrast):
-				self.contrast_list.append(contrast)
+			### On récupère le taux de contraste de l'image, qu'on ajoute à la liste globale si cette première n'est pas nan. ###
+			contrast = self.getContrast(grayscale_img)
+			if not math.isnan(contrast):
+					self.contrast_list.append(contrast)
+		except Exception as e:
+			print(e)
 
 	def addCommentScore(self, comments):
 		"""
