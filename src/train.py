@@ -24,7 +24,9 @@ import pickle
 import random
 import argparse
 import math
+import operator
 from itertools import chain
+from statistics import mean
 
 ### Installed libs. ###
 import pprint
@@ -68,19 +70,19 @@ class Trainer(object):
 		super().__init__()
 		self.key_features = [
 			#'biographyscore', # Construit sur le même jeu d'entrainement que la classification actuelle, à éviter donc jusqu'à trouver une nouvelle solution.
-			'commentscore',
 			'avglikes',
 			'avgcomments',
-			'engagement',
-			'followers',
-			'followings',
-			'nmedias',
-			'frequency',
-			'usermentions',
-			'colorfulness_std',
+			#'category',
 			'color_distorsion',
+			'colorfulness_std',
 			'contrast_std',
-			'category',
+			'frequency',
+			'engagement',
+			'followings',
+			'followers',
+			'nmedias',
+			'usermentions',
+			'commentscore',
 			'is_verified'
 		]
 
@@ -168,6 +170,8 @@ class Trainer(object):
 		### Sauvegarde le modèle du vectorisateur de dico. ###
 		with open(dictvec_model_path, 'wb') as f:
 			pickle.dump(self.dictvec, f)
+
+		self.correlationAnalysis()
 
 		for user in self.users_array:
 
@@ -360,6 +364,39 @@ class Trainer(object):
 					print(e)
 					print('The user doesn\'t exist or has a private account. Please try again.')
 					pass
+
+	def pearsonr(self, x, y):
+		"""
+		Calcule le coefficient de corrélation de Pearson.
+
+			Args:
+				x (float[]) : La liste des échantillons de la variable aléatoire X.
+				y (float[]) : La liste des échantillons de la variable aléatoire Y.
+			
+			Returns:
+				(float) Le coefficient de corrélation de Pearson compris entre 1 (corrélation linéaire parfaite) et -1 (corrélation linéaire négative parfaite).
+		"""
+		
+		multlist = lambda a, b: map(operator.mul, a, b)
+		xy = multlist(x, y)
+		xx = multlist(x, x)
+		yy = multlist(y, y)
+		return (mean(xy) - mean(x) * mean(y)) / math.sqrt((mean(xx) - mean(x)**2) * (mean(yy) - mean(y)**2))
+
+	def correlationAnalysis(self):
+		mat = []
+		for index, xkey in enumerate(tqdm(self.key_features)):
+			row = []
+			for ykey in self.key_features[index:]:
+				row.append(
+					self.pearsonr(
+						[user[xkey] for user in self.users_array],
+						[user[ykey] for user in self.users_array]
+					)
+				)
+			row = [0] * index + row
+			mat.append(row)
+		pp.pprint(mat)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
