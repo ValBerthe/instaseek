@@ -23,6 +23,7 @@ moviepy = "==0.2.3.5"
 instaseek = {editable = true, path = "."}
 
 [dev-packages]
+pylint = "*"
 
 [requires]
 python_version = "3.6"
