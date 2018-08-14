@@ -11,5 +11,5 @@ scipy>=1.1.0
 regex>=2018.7.11
 tqdm>=4.11.2
 numpy>=1.15.0
-InstagramAPI
+InstagramApi>=1.0.2
 requests>=2.19.1
